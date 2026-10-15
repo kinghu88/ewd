@@ -1,0 +1,919 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   主题变量（shadcn/ui 约定，HSL 分量）
+   ============================================================ */
+:root {
+  --background: 210 65% 96%;
+  --foreground: 222 28% 28%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 28% 28%;
+  --primary: 219 88% 69%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 214 60% 95%;
+  --secondary-foreground: 222 28% 28%;
+  --muted: 214 55% 94%;
+  --muted-foreground: 220 15% 51%;
+  --accent: 214 60% 95%;
+  --accent-foreground: 222 28% 28%;
+  --destructive: 358 76% 59%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 153 60% 38%;
+  --success-foreground: 0 0% 100%;
+  --border: 214 50% 88%;
+  --input: 214 40% 86%;
+  --ring: 219 88% 69%;
+  --radius: 0.75rem;
+
+  /* 四线格：格宽（格高为其 3 倍）与手写体基线补偿 */
+  --fl-cell: clamp(34px, 9.2vw, 56px);
+  --fl-baseline-shift: 0.2em;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  color: hsl(var(--foreground));
+  background: linear-gradient(160deg, #eef5fc 0%, #f5f0fb 100%);
+  font-family:
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Microsoft YaHei',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================================
+   四线三格（从单文件版验证过的样式迁移，fl- 前缀避免与工具类冲突）
+   ============================================================ */
+.fl-grid-scroll {
+  overflow-x: auto;
+  padding: 8px 4px 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fl-grid {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  justify-content: center;
+  width: max-content;
+  min-width: min-content;
+  margin: 0 auto;
+}
+
+.fl-grid.shake {
+  animation: fl-shake 0.4s;
+}
+
+/* 单个字母格：宽 --fl-cell，高 = 宽 × 3（上中下三格等高） */
+.fl-cell {
+  position: relative;
+  flex: none;
+  width: var(--fl-cell);
+  height: calc(var(--fl-cell) * 3);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+/* 四条水平线：顶线 / 中线 / 基线 / 底线 */
+.fl-ln {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 0;
+  pointer-events: none;
+  border-top: 1.6px solid #a9c3de;
+}
+.fl-ln-top {
+  top: 0;
+}
+.fl-ln-mid {
+  top: calc(100% / 3);
+}
+.fl-ln-base {
+  top: calc(200% / 3);
+  border-top-color: #86a8cc; /* 基线略深 */
+}
+.fl-ln-bottom {
+  top: 100%;
+}
+
+/* 字母层：所有格统一锚定在基线（距底部一格）上 */
+.fl-letter {
+  position: absolute;
+  right: 0;
+  bottom: calc(var(--fl-cell) - var(--fl-baseline-shift));
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: var(--fl-cell);
+  font-family:
+    'Comic Sans MS', 'Segoe Print', 'Chalkboard SE', 'Comic Neue',
+    'Marker Felt', cursive;
+  font-size: calc(var(--fl-cell) * 1.78);
+  line-height: 1;
+  color: hsl(var(--foreground));
+  pointer-events: none;
+  user-select: none;
+}
+
+.fl-cell.fl-cell-empty .fl-letter {
+  color: transparent;
+}
+
+/* 字母纵向占位规则 */
+.fl-cell.lt-mid .fl-letter {
+  height: var(--fl-cell);
+}
+.fl-cell.lt-asc .fl-letter {
+  height: calc(var(--fl-cell) * 2); /* b d h k l i t 上中格 */
+}
+.fl-cell.lt-desc .fl-letter {
+  height: calc(var(--fl-cell) * 2);
+  overflow: visible; /* g p q y 中下格 */
+}
+.fl-cell.lt-full .fl-letter {
+  height: calc(var(--fl-cell) * 3);
+  overflow: visible; /* f j 三格 */
+}
+
+/* 隐形输入框覆盖整格（16px 字号防 iOS 聚焦缩放） */
+.fl-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  font-size: 16px;
+  color: transparent;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  caret-color: transparent;
+  cursor: pointer;
+}
+
+.fl-cell:focus-within {
+  background: rgba(106, 157, 246, 0.12);
+}
+.fl-cell:focus-within::after {
+  position: absolute;
+  inset: -3px -2px;
+  content: '';
+  pointer-events: none;
+  border: 2px solid hsl(var(--primary));
+  border-radius: 6px;
+}
+
+.fl-cell.is-filled .fl-letter {
+  animation: fl-pop 0.18s ease;
+}
+
+/* 预填非字母格（连字符等） */
+.fl-cell-fixed {
+  background: repeating-linear-gradient(
+    45deg,
+    #f5f8fc,
+    #f5f8fc 6px,
+    #eef3f9 6px,
+    #eef3f9 12px
+  );
+}
+
+/* 确认锁定态与对错闪烁 */
+.fl-grid.locked .fl-cell {
+  background: #eef2f7;
+}
+.fl-grid.locked .fl-letter {
+  color: #93a2b8;
+}
+.fl-grid.locked .fl-input {
+  pointer-events: none;
+}
+.fl-grid.locked .fl-cell:focus-within::after {
+  display: none;
+}
+.fl-grid.flash-ok {
+  animation: fl-ok-flash 0.85s;
+}
+.fl-grid.flash-ok .fl-letter {
+  color: hsl(var(--success));
+}
+.fl-grid.flash-bad {
+  animation: fl-bad-flash 0.85s;
+}
+.fl-grid.flash-bad .fl-letter {
+  color: hsl(var(--destructive));
+}
+
+@keyframes fl-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-7px);
+  }
+  40% {
+    transform: translateX(7px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes fl-pop {
+  0% {
+    transform: scale(0.6);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fl-ok-flash {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.035);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fl-bad-flash {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* ============================================================
+   限时模式：倒计时紧迫感（边缘红光 / 心跳 / 时间到全屏）
+   ============================================================ */
+
+/* 最后 5 秒：屏幕四周红色呼吸光晕 */
+.tmr-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  box-shadow: inset 0 0 70px 14px rgba(226, 54, 54, 0.28);
+  animation: tmr-vignette 0.9s ease-in-out infinite;
+}
+@keyframes tmr-vignette {
+  0%,
+  100% {
+    box-shadow: inset 0 0 56px 8px rgba(226, 54, 54, 0.16);
+  }
+  50% {
+    box-shadow: inset 0 0 100px 30px rgba(226, 54, 54, 0.46);
+  }
+}
+
+/* 倒计时数字心跳 */
+.tmr-heartbeat {
+  animation: tmr-heartbeat 0.8s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes tmr-heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.16);
+  }
+  45% {
+    transform: scale(1);
+  }
+  65% {
+    transform: scale(1.1);
+  }
+}
+
+/* 归零：全屏淡入红场 + 居中「时间到」 */
+.tmr-timeup {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(226, 54, 54, 0.1),
+    rgba(226, 54, 54, 0.34)
+  );
+  animation: tmr-timeup-in 0.25s ease-out;
+}
+.tmr-timeup span {
+  font-size: clamp(42px, 11vw, 76px);
+  font-weight: 800;
+  color: #e03a3a;
+  letter-spacing: 0.14em;
+  text-shadow: 0 6px 28px rgba(226, 54, 54, 0.4);
+  animation: tmr-heartbeat 0.6s ease-in-out infinite;
+}
+@keyframes tmr-timeup-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tmr-vignette,
+  .tmr-heartbeat,
+  .tmr-timeup,
+  .tmr-timeup span {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   连击播报（DOUBLE KILL / TRIPLE KILL …）
+   ============================================================ */
+.combo-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.combo-banner {
+  text-align: center;
+  animation: combo-pop 1.3s cubic-bezier(0.2, 0.9, 0.25, 1) forwards;
+}
+
+.combo-en {
+  font-size: clamp(34px, 9vw, 64px);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  color: var(--combo-color);
+  text-shadow:
+    0 0 18px color-mix(in srgb, var(--combo-color) 55%, transparent),
+    0 4px 0 rgba(0, 0, 0, 0.18),
+    0 10px 34px color-mix(in srgb, var(--combo-color) 45%, transparent);
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.55);
+  transform: skewX(-8deg);
+}
+
+.combo-zh {
+  display: inline-block;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: rgba(38, 48, 74, 0.82);
+  padding: 5px 16px;
+  font-size: clamp(13px, 3vw, 18px);
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.04em;
+  box-shadow: 0 8px 24px rgba(40, 50, 80, 0.28);
+}
+
+/* 超神：金色流光循环 */
+.combo-banner-legendary .combo-en {
+  background: linear-gradient(90deg, #ffd23f, #ff8a00, #ffd23f, #ff8a00, #ffd23f);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0;
+  animation: combo-shine 1s linear infinite;
+}
+
+/* 连击计数小徽章：数字跳动 */
+.combo-chip {
+  transition: transform 0.15s ease;
+}
+.combo-chip.combo-chip-pop {
+  animation: combo-chip-pop 0.4s ease;
+}
+
+/* 结算页 ACE（全部答对 / 团灭） */
+.ace-banner {
+  margin: 4px auto 2px;
+  text-align: center;
+  animation: ace-in 0.7s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+@keyframes ace-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-10deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+.ace-en {
+  font-size: clamp(40px, 10vw, 66px);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  background: linear-gradient(90deg, #ffd23f, #ff8a00, #ffd23f, #ff8a00, #ffd23f);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 6px 18px rgba(255, 138, 0, 0.35));
+  animation: combo-shine 1.6s linear infinite;
+}
+.ace-zh {
+  display: inline-block;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: rgba(38, 48, 74, 0.85);
+  padding: 5px 18px;
+  font-size: clamp(14px, 3.2vw, 19px);
+  font-weight: 700;
+  color: #ffd98a;
+}
+
+@keyframes combo-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-14deg);
+  }
+  14% {
+    opacity: 1;
+    transform: scale(1.18) rotate(3deg);
+  }
+  26% {
+    transform: scale(1) rotate(-2deg);
+  }
+  36% {
+    transform: scale(1.03) rotate(0deg);
+  }
+  78% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08) translateY(-10px);
+  }
+}
+
+@keyframes combo-shine {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 220% 0;
+  }
+}
+
+@keyframes combo-chip-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .combo-banner,
+  .combo-banner-legendary .combo-en,
+  .combo-chip.combo-chip-pop,
+  .ace-banner,
+  .ace-en {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   闯关：关卡结算弹层 & 幸运红包
+   ============================================================ */
+
+/* 结算图标弹入 */
+.gate-pop {
+  animation: gate-pop 0.5s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+@keyframes gate-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-12deg);
+  }
+  70% {
+    transform: scale(1.12) rotate(3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* 奖品卡片淡入上移 */
+.prize-card {
+  animation: prize-card-in 0.45s ease both;
+}
+@keyframes prize-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ----------------------------- 幸运红包 ----------------------------- */
+
+/* 未拆开的红包轻轻上下浮动，引导点击 */
+@keyframes packet-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* 被选中瞬间向上弹一下再翻转 */
+@keyframes packet-hop {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  45% {
+    transform: translateY(-14px) scale(1.06);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 翻开后内容弹出 */
+@keyframes packet-result-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  70% {
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.packet-scene {
+  perspective: 900px;
+  width: clamp(88px, 26vw, 110px);
+  height: clamp(124px, 36vw, 150px);
+}
+
+.packet {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.2, 0.75, 0.25, 1);
+  cursor: pointer;
+  animation: packet-float 2.4s ease-in-out infinite;
+}
+.packet.is-flipped {
+  transform: rotateY(180deg);
+  animation: none;
+}
+.packet.is-hopping {
+  animation: packet-hop 0.5s ease;
+}
+.packet.is-dimmed {
+  opacity: 0.55;
+}
+
+.packet-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* 红包正面：红色袋身 + 金色弧形封条 + 金色「福」印 */
+.packet-front {
+  border: 2px solid #ffd77a;
+  background: linear-gradient(160deg, #ff6a5e 0%, #ef4444 55%, #d62f2f 100%);
+  box-shadow: 0 10px 22px rgba(214, 47, 47, 0.35);
+}
+.packet-front::before {
+  position: absolute;
+  top: -34%;
+  left: -20%;
+  width: 140%;
+  height: 46%;
+  content: '';
+  border-radius: 0 0 50% 50%;
+  background: linear-gradient(180deg, #ffe9a8 0%, #f6c34f 100%);
+}
+.packet-seal {
+  position: relative;
+  display: flex;
+  height: 40px;
+  width: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: linear-gradient(160deg, #ffe9a8, #e8a92b);
+  color: #c83a2e;
+  font-size: 22px;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgba(120, 60, 0, 0.3);
+}
+.packet-front-label {
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #ffe9a8;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+/* 红包背面（翻开面）：金色底卡 */
+.packet-back {
+  transform: rotateY(180deg);
+  border: 2px solid #f3d8a4;
+  background: linear-gradient(160deg, #fffaf0 0%, #fff3da 100%);
+  box-shadow: 0 10px 22px rgba(224, 138, 30, 0.25);
+}
+.packet.is-flipped .packet-result {
+  animation: packet-result-pop 0.5s 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.packet-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  text-align: center;
+}
+.packet-result-amount {
+  color: #d97706;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+.packet-result-text {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #b07a2a;
+}
+.packet-result-cheer {
+  color: #8a97ab;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-pop,
+  .prize-card,
+  .packet,
+  .packet.is-hopping,
+  .packet.is-flipped .packet-result {
+    animation: none;
+  }
+  .packet {
+    transition: none;
+  }
+}
+
+/* ============================================================
+   金币商店
+   ============================================================ */
+
+/* 兑换券票根与券体之间的虚线撕齿 */
+.shop-voucher-perfs {
+  border-left: 2px dashed #e3c9a0;
+  transform: translateX(-1px);
+}
+
+/* ============================================================
+   「查看单词」狙击镜特效（AI 视频 + 开火瞬间逐字母弹出）
+   ============================================================ */
+
+.peek-stage {
+  position: relative;
+}
+
+/* 特效层：以四线格为中心向上下扩展，形成狙击时刻接管区，
+   保证圆形镜筒与冲击波完整入镜（克隆格仍与真实格子对齐，见下方偏移） */
+.peek-overlay {
+  --peek-up: 122px;
+  --peek-down: 122px;
+  position: absolute;
+  top: calc(-1 * var(--peek-up));
+  right: 0;
+  left: 0;
+  z-index: 6;
+  height: calc(100% + var(--peek-up) + var(--peek-down));
+  overflow: hidden;
+  border-radius: 14px;
+  background: #e9ebef; /* 与视频浅灰底一致，cover 裁切边缘也无缝 */
+  animation: peek-fade-in 0.2s ease both;
+  transition: opacity 0.3s ease;
+}
+.peek-overlay.is-leaving {
+  opacity: 0;
+}
+@keyframes peek-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* AI 生成视频：第一人称狙击镜铺满格子区 */
+.peek-scope-video {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+/* 右下角「AI生成」水印：浅灰底柔化补丁 */
+.peek-wm-cover {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 118px;
+  height: 40px;
+  background: linear-gradient(135deg, rgba(233, 235, 239, 0) 0%, rgba(233, 235, 239, 0.92) 45%, #e9ebef 100%);
+  pointer-events: none;
+}
+
+/* 克隆四线格：绝对定位回到真实格子的位置（overlay 上移了 --peek-up） */
+.peek-grid-scroll {
+  position: absolute;
+  top: calc(var(--peek-up) + 8px);
+  right: 4px;
+  left: 4px;
+  z-index: 2;
+  overflow: hidden;
+}
+.peek-grid {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  justify-content: center;
+  width: max-content;
+  min-width: min-content;
+  margin: 0 auto;
+}
+.peek-cell {
+  position: relative;
+  flex: none;
+  width: var(--fl-cell);
+  height: calc(var(--fl-cell) * 3);
+}
+.peek-cell .fl-letter.peek-letter {
+  color: #232c3f;
+  text-shadow: 0 2px 12px rgba(255, 255, 255, 0.75);
+  animation: peek-letter-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+/* 克隆层字母纵向占位（.lt-* 在真格里是祖先选择器，这里直接落在字母上） */
+.peek-cell .fl-letter.lt-asc,
+.peek-cell .fl-letter.lt-desc {
+  height: calc(var(--fl-cell) * 2);
+}
+.peek-cell .fl-letter.lt-full {
+  height: calc(var(--fl-cell) * 3);
+}
+@keyframes peek-letter-in {
+  0% {
+    opacity: 0;
+    transform: scale(1.7);
+    filter: blur(2px);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.9);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 命中火花：四向橙色射线 + 白色中心光点（与视频冲击波同扁平语言） */
+.peek-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  animation: peek-spark 0.42s ease-out forwards;
+}
+.peek-spark i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2.5px;
+  height: 14px;
+  margin-left: -1.25px;
+  margin-top: -14px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ffffff, #ffb02e);
+  transform-origin: 50% 100%;
+}
+.peek-spark i:nth-child(1) {
+  transform: rotate(0deg);
+}
+.peek-spark i:nth-child(2) {
+  transform: rotate(45deg);
+}
+.peek-spark i:nth-child(3) {
+  transform: rotate(90deg);
+}
+.peek-spark i:nth-child(4) {
+  transform: rotate(135deg);
+}
+.peek-spark b {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  margin-top: -3.5px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #ffffff 0%, #ffc24d 75%);
+}
+@keyframes peek-spark {
+  0% {
+    opacity: 1;
+    transform: scale(0.3) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4) rotate(24deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .peek-overlay,
+  .peek-cell .fl-letter.peek-letter,
+  .peek-spark {
+    animation: none;
+  }
+}

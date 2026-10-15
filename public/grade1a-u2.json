@@ -1,0 +1,6 @@
+[
+    { "name": "jump",    "trans": ["跳", "跳跃"] },
+    { "name": "teacher", "trans": ["老师", "教师"] },
+    { "name": "fruit",   "trans": ["水果"] },
+    { "name": "strong",  "trans": ["强壮的"] }
+]

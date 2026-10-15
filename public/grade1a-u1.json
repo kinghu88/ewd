@@ -1,0 +1,6 @@
+[
+    { "name": "sport",  "trans": ["体育运动"] },
+    { "name": "player", "trans": ["运动员", "选手", "球员"] },
+    { "name": "family", "trans": ["家庭", "家人"] },
+    { "name": "happy",  "trans": ["快乐的", "高兴的"] }
+]
