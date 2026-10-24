@@ -1,0 +1,16 @@
+[
+    { "name": "future",    "trans": ["将来", "未来"] },
+    { "name": "moon",      "trans": ["月亮", "月球"] },
+    { "name": "drive",     "trans": ["开车", "驾驶"] },
+    { "name": "pet",       "trans": ["宠物"] },
+    { "name": "space",     "trans": ["太空"] },
+    { "name": "danger",    "trans": ["危险"] },
+    { "name": "glass",     "trans": ["玻璃"] },
+    { "name": "celebrate", "trans": ["庆祝"] },
+    { "name": "hundred",   "trans": ["一百"] },
+    { "name": "pie",       "trans": ["馅饼", "派"] },
+    { "name": "fries",     "trans": ["炸薯条"] },
+    { "name": "bright",    "trans": ["（前途）光明的；明亮的"] },
+    { "name": "shape",     "trans": ["形", "形状", "外形"] },
+    { "name": "pill",      "trans": ["药丸", "药片"] }
+]

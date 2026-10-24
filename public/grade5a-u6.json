@@ -1,0 +1,11 @@
+[
+    { "name": "boat",             "trans": ["小船", "小舟"] },
+    { "name": "mooncake",         "trans": ["月饼"] },
+    { "name": "September",        "trans": ["九月"] },
+    { "name": "zookeeper",        "trans": ["动物园饲养员"] },
+    { "name": "candle",           "trans": ["蜡烛"] },
+    { "name": "merry",            "trans": ["快乐的"] },
+    { "name": "Merry Christmas!", "trans": ["圣诞快乐！"] },
+    { "name": "celebration",      "trans": ["庆祝；庆祝活动"] },
+    { "name": "bell",             "trans": ["钟；铃"] }
+]

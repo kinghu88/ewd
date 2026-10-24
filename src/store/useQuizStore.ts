@@ -2,10 +2,16 @@ import { create } from 'zustand';
 import type { GateKind, QuizMode, QuizRecord, ViewName, WordItem } from '@/lib/types';
 import { addWrongWord } from '@/lib/storage';
 import { authApi, rewardsApi, shopApi, tokenStore, type AuthUser } from '@/lib/api';
+import {
+  DEFAULT_CHALLENGE_REWARD,
+  type ChallengeRewardConfig,
+} from '@/lib/rewards';
 import { buildGrid, isAnswerCorrect, shuffleWords, type GridCell } from '@/lib/words';
 
-/** 闯关模式：每关生命数（答错 / 超时扣 1 心） */
+/** 闯关模式：每关默认生命数（答错 / 超时扣 1 心） */
 export const LEVEL_LIVES = 3;
+/** 整年级全部单元闯关：每关初始生命数 */
+export const FULL_GRADE_LIVES = 10;
 
 /** 闯关模式的一关：一个单元（title 为单元名，如「上册 1 单元」） */
 export interface QuizLevel {
@@ -20,7 +26,7 @@ interface Settings {
   timed: boolean;
   /** 连击 / 判题音效 */
   sound: boolean;
-  /** 闯关模式（三心制，全部通关后可拆幸运红包） */
+  /** 闯关模式（生命制，全部通关后可拆幸运红包） */
   challenge: boolean;
 }
 
@@ -54,6 +60,10 @@ interface QuizState {
   levelIndex: number;
   /** 闯关：总关卡数 */
   levelCount: number;
+  /** 闯关：本轮奖励配置（单元数 / 是否整年级） */
+  challengeReward: ChallengeRewardConfig;
+  /** 闯关：每关初始生命数（整年级为 10，其余为 3） */
+  initialLives: number;
   /** 闯关：本关剩余生命数 */
   lives: number;
   /** 闯关：关卡结算弹层（null = 答题中） */
@@ -98,12 +108,14 @@ interface QuizState {
   /**
    * 开始一轮默写。
    * @param levels 闯关模式下的关卡定义（一关一个单元）；未传时整份词表按一关处理
+   * @param reward 闯关奖励配置（单元数量 / 是否整年级全部单元）
    */
   startQuiz: (
     words: WordItem[],
     sourceLabel: string,
     mode?: QuizMode,
     levels?: QuizLevel[],
+    reward?: ChallengeRewardConfig,
   ) => void;
   setLetter: (i: number, letter: string) => void;
   clearLetters: () => void;
@@ -115,7 +127,7 @@ interface QuizState {
   next: () => void;
   /**
    * 判题闪烁结束后推进：
-   * 普通模式等同 next；闯关模式按三颗心 / 关卡边界决定下一词、过关、失败或通关
+   * 普通模式等同 next；闯关模式按剩余生命 / 关卡边界决定下一词、过关、失败或通关
    */
   advance: () => void;
   /** 闯关：进入下一关（生命重置） */
@@ -227,6 +239,8 @@ export const useQuizStore = create<QuizState>((set, get) => ({
   levels: [],
   levelIndex: 0,
   levelCount: 1,
+  challengeReward: DEFAULT_CHALLENGE_REWARD,
+  initialLives: LEVEL_LIVES,
   lives: LEVEL_LIVES,
   gate: null,
   combo: 0,
@@ -251,7 +265,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
   setPeekActive: (active) => set({ peekActive: active }),
   refreshBook: () => set((s) => ({ bookVersion: s.bookVersion + 1 })),
 
-  startQuiz: (words, sourceLabel, mode, levelsArg) => {
+  startQuiz: (words, sourceLabel, mode, levelsArg, rewardArg) => {
     const { shuffle, challenge } = get().settings;
     const useMode: QuizMode = mode ?? (challenge ? 'challenge' : 'normal');
 
@@ -273,6 +287,16 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       list = shuffle ? shuffleWords(words) : words.slice();
     }
 
+    // 闯关奖励配置：单元数决定金币加成；整年级全部单元使用专属奖励与 10 颗心
+    const challengeReward: ChallengeRewardConfig =
+      useMode === 'challenge'
+        ? {
+            unitCount: Math.max(1, Math.floor(rewardArg?.unitCount ?? levels.length) || 1),
+            fullGrade: rewardArg?.fullGrade ?? false,
+          }
+        : DEFAULT_CHALLENGE_REWARD;
+    const initialLives = challengeReward.fullGrade ? FULL_GRADE_LIVES : LEVEL_LIVES;
+
     set({
       mode: useMode,
       words: list,
@@ -284,7 +308,9 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       levels,
       levelIndex: 0,
       levelCount: Math.max(1, levels.length),
-      lives: LEVEL_LIVES,
+      challengeReward,
+      initialLives,
+      lives: initialLives,
       gate: null,
       combo: 0,
       maxCombo: 0,
@@ -361,7 +387,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       s.next();
       return;
     }
-    // 三颗心用尽：立即判本关失败（即使刚答完最后一个词，失败优先）
+    // 生命用尽：立即判本关失败（即使刚答完最后一个词，失败优先）
     if (s.lives <= 0) {
       set({ gate: 'fail' });
       return;
@@ -391,19 +417,22 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       index,
       cells: cellsOf(s.words[index]!),
       locked: false,
-      lives: LEVEL_LIVES,
+      // 整年级闯关：10 颗心整轮共用，过关后不清空；其余模式每关恢复 3 颗心
+      lives: s.challengeReward.fullGrade ? s.lives : s.initialLives,
     });
   },
 
   retryLevel: () => {
     const s = get();
+    // 整年级闯关：任一小关卡失败即整轮结束，不允许重试本关
+    if (s.challengeReward.fullGrade) return;
     const index = levelRange(s.levels, s.levelIndex).start;
     set({
       gate: null,
       index,
       cells: cellsOf(s.words[index]!),
       locked: false,
-      lives: LEVEL_LIVES,
+      lives: s.initialLives,
       combo: 0,
       // 丢弃本次失败尝试的答题记录，之前已通过关卡的记录保留
       records: s.records.slice(0, index),
@@ -416,8 +445,14 @@ export const useQuizStore = create<QuizState>((set, get) => ({
 
   restart: () => {
     const s = get();
-    // 闯关模式带上关卡（单元）定义，重玩时仍是「一个单元一关」
-    get().startQuiz(s.words, s.sourceLabel, s.mode, s.levels.length > 0 ? s.levels : undefined);
+    // 闯关模式带上关卡（单元）定义与奖励配置，重玩时仍是「一个单元一关」、奖励规则不变
+    get().startQuiz(
+      s.words,
+      s.sourceLabel,
+      s.mode,
+      s.levels.length > 0 ? s.levels : undefined,
+      s.mode === 'challenge' ? s.challengeReward : undefined,
+    );
   },
 
   goHome: () => set({ view: 'home', locked: false, gate: null }),

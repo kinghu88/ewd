@@ -1,0 +1,19 @@
+[
+    { "name": "bear",        "trans": ["熊"] },
+    { "name": "where",       "trans": ["在哪里"] },
+    { "name": "room",        "trans": ["房间"] },
+    { "name": "living room", "trans": ["客厅"] },
+    { "name": "yes",         "trans": ["是（的）", "对"] },
+    { "name": "on",          "trans": ["在……上面"] },
+    { "name": "table",       "trans": ["桌子"] },
+    { "name": "under",       "trans": ["在……下面"] },
+    { "name": "sofa",        "trans": ["长沙发"] },
+    { "name": "need",        "trans": ["需要"] },
+    { "name": "water",       "trans": ["水"] },
+    { "name": "bottle",      "trans": ["瓶子"] },
+    { "name": "there",       "trans": ["在那里"] },
+    { "name": "your",        "trans": ["你的"] },
+    { "name": "behind",      "trans": ["在……后面"] },
+    { "name": "bed",         "trans": ["床"] },
+    { "name": "Jack",        "trans": ["杰克"] }
+]

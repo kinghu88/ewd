@@ -1,0 +1,15 @@
+[
+    { "name": "red",       "trans": ["红色"] },
+    { "name": "like",      "trans": ["喜欢", "喜爱"] },
+    { "name": "blue",      "trans": ["蓝色"] },
+    { "name": "yellow",    "trans": ["黄色"] },
+    { "name": "green",     "trans": ["绿色"] },
+    { "name": "orange",    "trans": ["橘黄色", "橙色"] },
+    { "name": "colourful", "trans": ["色彩丰富的"] },
+    { "name": "picture",   "trans": ["画", "图画"] },
+    { "name": "what",      "trans": ["什么（用于询问信息或征求意见）"] },
+    { "name": "colour",    "trans": ["颜色"] },
+    { "name": "it",        "trans": ["它", "这", "那"] },
+    { "name": "look",      "trans": ["瞧"] },
+    { "name": "hooray",    "trans": ["好哇（表示高兴的呼喊声）"] }
+]

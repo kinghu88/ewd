@@ -1,6 +1,16 @@
 [
-    { "name": "sport",  "trans": ["体育运动"] },
-    { "name": "player", "trans": ["运动员", "选手", "球员"] },
-    { "name": "family", "trans": ["家庭", "家人"] },
-    { "name": "happy",  "trans": ["快乐的", "高兴的"] }
+    { "name": "hello",          "trans": ["你好"] },
+    { "name": "nice",           "trans": ["令人愉快的"] },
+    { "name": "to",             "trans": ["（用于动词", "名词或形容词后", "使意思完整）"] },
+    { "name": "meet",           "trans": ["认识", "结识"] },
+    { "name": "you",            "trans": ["你"] },
+    { "name": "hi",             "trans": ["你好", "嗨"] },
+    { "name": "let's = let us", "trans": ["让我们……吧"] },
+    { "name": "play",           "trans": ["玩", "玩耍"] },
+    { "name": "OK",             "trans": ["行", "可以"] },
+    { "name": "be",             "trans": ["是；成为"] },
+    { "name": "friend",         "trans": ["朋友"] },
+    { "name": "I",              "trans": ["我"] },
+    { "name": "my",             "trans": ["我的"] },
+    { "name": "name",           "trans": ["名字"] }
 ]

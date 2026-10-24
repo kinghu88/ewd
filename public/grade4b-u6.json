@@ -1,0 +1,18 @@
+[
+    { "name": "T-shirt",    "trans": ["T恤（衫）"] },
+    { "name": "skirt",      "trans": ["半身裙", "裙子"] },
+    { "name": "shorts",     "trans": ["短裤"] },
+    { "name": "shirt",      "trans": ["衬衫"] },
+    { "name": "trousers",   "trans": ["裤子"] },
+    { "name": "scarf",      "trans": ["围巾"] },
+    { "name": "sweater",    "trans": ["毛线衣", "羊毛衫", "针织衫"] },
+    { "name": "dress",      "trans": ["连衣裙"] },
+    { "name": "party",      "trans": ["聚会", "宴会"] },
+    { "name": "dressmaker", "trans": ["裁缝"] },
+    { "name": "wrong",      "trans": ["不正确的", "错误的"] },
+    { "name": "clever",     "trans": ["聪明的"] },
+    { "name": "whale",      "trans": ["鲸"] },
+    { "name": "Mr",         "trans": ["先生"] },
+    { "name": "uniform",    "trans": ["制服"] },
+    { "name": "robe",       "trans": ["长袍"] }
+]

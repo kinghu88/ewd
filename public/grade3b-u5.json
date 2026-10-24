@@ -1,0 +1,21 @@
+[
+    { "name": "tick-tock",           "trans": ["嘀嗒声"] },
+    { "name": "tell",                "trans": ["告诉", "告知"] },
+    { "name": "clock",               "trans": ["时钟"] },
+    { "name": "o'clock",             "trans": ["点钟"] },
+    { "name": "fifteen",             "trans": ["十五"] },
+    { "name": "thirty",              "trans": ["三十"] },
+    { "name": "forty-five",          "trans": ["四十五"] },
+    { "name": "dinner",              "trans": ["正餐", "主餐"] },
+    { "name": "half",                "trans": ["一半", "半"] },
+    { "name": "past",                "trans": ["晚于；在……之后"] },
+    { "name": "half past one / two", "trans": ["1点半/2点半等"] },
+    { "name": "urgh",                "trans": ["呃", "呸"] },
+    { "name": "homework",            "trans": ["家庭作业", "功课"] },
+    { "name": "need",                "trans": ["需要"] },
+    { "name": "activity",            "trans": ["活动"] },
+    { "name": "her",                 "trans": ["她的"] },
+    { "name": "class",               "trans": ["课；班级"] },
+    { "name": "evening",             "trans": ["傍晚；晚上"] },
+    { "name": "call",                "trans": ["（给……）打电话"] }
+]

@@ -255,7 +255,7 @@ export function Home() {
               aria-label="闯关模式"
             />
             <Swords className="h-4 w-4 text-[#e08a1e]" />
-            闯关模式（一个单元为一关、三颗心，闯完所选单元可拆幸运红包）
+            闯关模式（一个单元为一关；普通挑战每关 3 颗心，整年级整轮共 10 颗心）
           </label>
         </div>
         <div className="flex flex-col gap-2.5">

@@ -1,0 +1,17 @@
+[
+    { "name": "seed",      "trans": ["种子", "籽"] },
+    { "name": "earth",     "trans": ["泥土", "土壤"] },
+    { "name": "root",      "trans": ["根"] },
+    { "name": "stem",      "trans": ["（植物的）茎", "梗", "柄"] },
+    { "name": "thin",      "trans": ["细的"] },
+    { "name": "leaf",      "trans": ["叶", "叶子"] },
+    { "name": "dig",       "trans": ["挖", "掘"] },
+    { "name": "sunflower", "trans": ["向日葵"] },
+    { "name": "plant",     "trans": ["种植", "栽种；播（种）"] },
+    { "name": "dream",     "trans": ["梦想", "愿望", "理想"] },
+    { "name": "sleep",     "trans": ["睡", "睡觉"] },
+    { "name": "will",      "trans": ["将", "会", "要"] },
+    { "name": "true",      "trans": ["真的", "真实的"] },
+    { "name": "come true", "trans": ["实现"] },
+    { "name": "paper",     "trans": ["纸"] }
+]

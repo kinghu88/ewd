@@ -1,6 +1,18 @@
 [
-    { "name": "jump",    "trans": ["跳", "跳跃"] },
-    { "name": "teacher", "trans": ["老师", "教师"] },
-    { "name": "fruit",   "trans": ["水果"] },
-    { "name": "strong",  "trans": ["强壮的"] }
+    { "name": "one",      "trans": ["一"] },
+    { "name": "little",   "trans": ["小的"] },
+    { "name": "two",      "trans": ["二"] },
+    { "name": "three",    "trans": ["三"] },
+    { "name": "bird",     "trans": ["鸟"] },
+    { "name": "four",     "trans": ["四"] },
+    { "name": "five",     "trans": ["五"] },
+    { "name": "six",      "trans": ["六"] },
+    { "name": "in",       "trans": ["在……内；排列成……形状"] },
+    { "name": "a(an)",    "trans": ["一（个）"] },
+    { "name": "line",     "trans": ["排", "列", "行"] },
+    { "name": "the",      "trans": ["（用于表示正在谈论一个已经提到过", "已经知道或是唯一存在的人或物）"] },
+    { "name": "sky",      "trans": ["天空"] },
+    { "name": "take",     "trans": ["拍摄"] },
+    { "name": "photo",    "trans": ["照片", "相片"] },
+    { "name": "together", "trans": ["一起", "共同"] }
 ]

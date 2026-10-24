@@ -1,189 +1,42 @@
 [
-    {
-        "name": "sport",
-        "trans": [
-            "体育运动"
-        ]
-    },
-    {
-        "name": "jump",
-        "trans": [
-            "跳"
-        ]
-    },
-    {
-        "name": "high",
-        "trans": [
-            "高高地"
-        ]
-    },
-    {
-        "name": "far",
-        "trans": [
-            "远"
-        ]
-    },
-    {
-        "name": "ping-pong",
-        "trans": [
-            "乒乓球运动"
-        ]
-    },
-    {
-        "name": "volleyball",
-        "trans": [
-            "排球(运动)"
-        ]
-    },
-    {
-        "name": "across",
-        "trans": [
-            "从一边到另一边",
-            "穿过",
-            "越过"
-        ]
-    },
-    {
-        "name": "hope",
-        "trans": [
-            "希望"
-        ]
-    },
-    {
-        "name": "lose",
-        "trans": [
-            "失去"
-        ]
-    },
-    {
-        "name": "because",
-        "trans": [
-            "因为"
-        ]
-    },
-    {
-        "name": "because of sb / sth",
-        "trans": [
-            "因为某人/某事物"
-        ]
-    },
-    {
-        "name": "cancer",
-        "trans": [
-            "癌(症)"
-        ]
-    },
-    {
-        "name": "money",
-        "trans": [
-            "钱"
-        ]
-    },
-    {
-        "name": "hard",
-        "trans": [
-            "困难的"
-        ]
-    },
-    {
-        "name": "kind",
-        "trans": [
-            "亲切的",
-            "友好的",
-            "善良的"
-        ]
-    },
-    {
-        "name": "keep",
-        "trans": [
-            "持续",
-            "继续"
-        ]
-    },
-    {
-        "name": "month",
-        "trans": [
-            "一个月"
-        ]
-    },
-    {
-        "name": "ill",
-        "trans": [
-            "生病的"
-        ]
-    },
-    {
-        "name": "year",
-        "trans": [
-            "年",
-            "年度"
-        ]
-    },
-    {
-        "name": "remember",
-        "trans": [
-            "纪念",
-            "记住"
-        ]
-    },
-    {
-        "name": "fail",
-        "trans": [
-            "失败"
-        ]
-    },
-    {
-        "name": "give",
-        "trans": [
-            "给予"
-        ]
-    },
-    {
-        "name": "give up",
-        "trans": [
-            "放弃"
-        ]
-    },
-    {
-        "name": "never",
-        "trans": [
-            "决不",
-            "永不"
-        ]
-    },
-    {
-        "name": "try",
-        "trans": [
-            "努力",
-            "尝试"
-        ]
-    },
-    {
-        "name": "try your best",
-        "trans": [
-            "尽最大努力"
-        ]
-    },
-    {
-        "name": "star",
-        "trans": [
-            "明星",
-            "最出色者"
-        ]
-    },
-    {
-        "name": "ability",
-        "trans": [
-            "才能",
-            "能力"
-        ]
-    },
-    {
-        "name": "player",
-        "trans": [
-            "运动员",
-            "选手",
-            "球员"
-        ]
-    }
+    { "name": "let's = let us", "trans": ["让我们"] },
+    { "name": "friend",         "trans": ["朋友"] },
+    { "name": "to",             "trans": ["（用于动词", "名词或形容词后", "使意思完整）；向", "到", "往"] },
+    { "name": "meet",           "trans": ["认识", "结识"] },
+    { "name": "you",            "trans": ["你；你们"] },
+    { "name": "play",           "trans": ["玩", "玩耍"] },
+    { "name": "happy",          "trans": ["高兴的", "快乐的"] },
+    { "name": "new",            "trans": ["新的"] },
+    { "name": "do",             "trans": ["（构成疑问句或否定句）；做"] },
+    { "name": "they",           "trans": ["他们"] },
+    { "name": "welcome",        "trans": ["欢迎"] },
+    { "name": "everyone",       "trans": ["每个人", "人人"] },
+    { "name": "nine",           "trans": ["九"] },
+    { "name": "she",            "trans": ["她"] },
+    { "name": "too",            "trans": ["也"] },
+    { "name": "we",             "trans": ["我们"] },
+    { "name": "from",           "trans": ["从"] },
+    { "name": "the",            "trans": ["（用于表示正在谈论一个已经提到过", "已经知道", "或是唯一存在的人或物）"] },
+    { "name": "twin",           "trans": ["双胞胎中的一个"] },
+    { "name": "he",             "trans": ["他"] },
+    { "name": "come",           "trans": ["来；来到"] },
+    { "name": "and",            "trans": ["然后", "接着；和"] },
+    { "name": "oh",             "trans": ["噢"] },
+    { "name": "no",             "trans": ["不", "不行"] },
+    { "name": "help",           "trans": ["帮助", "帮忙"] },
+    { "name": "here",           "trans": ["在这里"] },
+    { "name": "here you are",   "trans": ["给你"] },
+    { "name": "thank",          "trans": ["感谢", "向……表示谢意"] },
+    { "name": "together",       "trans": ["一起", "一块儿"] },
+    { "name": "OK",             "trans": ["行", "可以"] },
+    { "name": "great",          "trans": ["极棒的", "极好的"] },
+    { "name": "song",           "trans": ["歌曲"] },
+    { "name": "dear",           "trans": ["亲爱的"] },
+    { "name": "sing",           "trans": ["唱", "歌唱"] },
+    { "name": "now",            "trans": ["现在"] },
+    { "name": "know",           "trans": ["认识"] },
+    { "name": "our",            "trans": ["我们的"] },
+    { "name": "everybody",      "trans": ["每个人", "人人"] },
+    { "name": "with",           "trans": ["和……一起"] },
+    { "name": "me",             "trans": ["我"] }
 ]

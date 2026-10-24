@@ -2,35 +2,46 @@ import { useEffect, useRef, useState } from 'react';
 import { Coins, Gift, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { drawPacketLayout, type PacketSlot } from '@/lib/rewards';
+import {
+  drawPacketLayout,
+  PACKET_COUNT,
+  type ChallengeRewardConfig,
+  type PacketSlot,
+} from '@/lib/rewards';
 import { rewardsApi } from '@/lib/api';
 import { playPacketMiss, playPacketPick, playPacketWin } from '@/lib/sfx';
 import { useQuizStore } from '@/store/useQuizStore';
 
 interface RedPacketDialogProps {
   open: boolean;
+  /** 本轮闯关的单元选择：决定金币加成与整年级专属红包 */
+  reward: ChallengeRewardConfig;
   /** 揭晓并结算后关闭（由父组件进入战绩页） */
   onClose: () => void;
 }
 
-const PACKET_COUNT = 3;
-
-export function RedPacketDialog({ open, onClose }: RedPacketDialogProps) {
+export function RedPacketDialog({ open, reward, onClose }: RedPacketDialogProps) {
   const soundOn = useQuizStore((s) => s.settings.sound);
   const bumpRewards = useQuizStore((s) => s.bumpRewards);
 
-  /** 本轮红包布局：打开弹窗时预生成，3 个中有且仅有 1 个金币红包 */
-  const [layout, setLayout] = useState<PacketSlot[]>(() => drawPacketLayout(PACKET_COUNT));
+  const isFullGrade = reward.fullGrade;
+
+  /** 本轮红包布局：打开弹窗时预生成。普通/多单元 1 个金币红包；整年级 3 个全是金币 */
+  const [layout, setLayout] = useState<PacketSlot[]>(() =>
+    drawPacketLayout(reward, PACKET_COUNT),
+  );
   /** 已翻开的红包下标集合 */
   const [flipped, setFlipped] = useState<number[]>([]);
   /** 正在上弹（尚未翻转）的红包下标 */
   const [hopping, setHopping] = useState<number | null>(null);
-  /** 用户选中的红包下标 */
+  /** 普通/多单元：用户选中的红包下标 */
   const [picked, setPicked] = useState<number | null>(null);
+  /** 整年级：已开始拆开全部红包 */
+  const [openedAll, setOpenedAll] = useState(false);
   /** 金币到账请求中 / 失败 */
   const [granting, setGranting] = useState(false);
   const [grantError, setGrantError] = useState(false);
-  /** 整个揭晓流程完成（其余红包也已翻开） */
+  /** 整个揭晓流程完成 */
   const [allRevealed, setAllRevealed] = useState(false);
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -44,19 +55,22 @@ export function RedPacketDialog({ open, onClose }: RedPacketDialogProps) {
   // 每次打开重置并重新洗牌（一轮通关只有一次拆红包机会）
   useEffect(() => {
     if (open) {
-      setLayout(drawPacketLayout(PACKET_COUNT));
+      setLayout(drawPacketLayout(reward, PACKET_COUNT));
       setFlipped([]);
       setHopping(null);
       setPicked(null);
+      setOpenedAll(false);
       setGranting(false);
       setGrantError(false);
       setAllRevealed(false);
       grantToken.current = 0;
     }
     return clearTimers;
-  }, [open]);
+    // 只在意单元数与整年级标记，避免父组件重渲染时重洗牌
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, reward.unitCount, reward.fullGrade]);
 
-  /** 把选中红包的金币落库，失败可重试；成语红包不发金币 */
+  /** 单个金币红包落库（普通 / 多单元），失败可重试；成语红包不发金币 */
   const claim = async (coins: number | null, token: number) => {
     if (coins === null) return;
     setGranting(true);
@@ -64,6 +78,25 @@ export function RedPacketDialog({ open, onClose }: RedPacketDialogProps) {
     try {
       await rewardsApi.grant(coins);
       if (token !== grantToken.current) return; // 弹窗已重置 / 关闭
+      bumpRewards();
+      setGranting(false);
+    } catch {
+      if (token === grantToken.current) {
+        setGranting(false);
+        setGrantError(true);
+      }
+    }
+  };
+
+  /** 整年级：3 个红包金币一次性原子到账 */
+  const claimAll = async (token: number) => {
+    const packets = layout.flatMap((slot) => (slot.kind === 'coin' ? [slot.coins] : []));
+    if (packets.length === 0) return;
+    setGranting(true);
+    setGrantError(false);
+    try {
+      await rewardsApi.grantPackets(packets);
+      if (token !== grantToken.current) return;
       bumpRewards();
       setGranting(false);
     } catch {
@@ -92,8 +125,44 @@ export function RedPacketDialog({ open, onClose }: RedPacketDialogProps) {
     );
   };
 
+  /** 整年级：依次翻开 3 个金币红包，同时一次性领取全部金币 */
+  const openAll = (index: number) => {
+    if (openedAll || granting) return;
+    const token = ++grantToken.current;
+    setOpenedAll(true);
+    setHopping(index);
+    if (soundOn) playPacketPick();
+
+    const order = [
+      index,
+      ...Array.from({ length: PACKET_COUNT }, (_, i) => i).filter((i) => i !== index),
+    ];
+    order.forEach((slotIndex, k) => {
+      timers.current.push(
+        setTimeout(() => {
+          if (token !== grantToken.current) return;
+          setHopping(null);
+          setFlipped((prev) => (prev.includes(slotIndex) ? prev : [...prev, slotIndex]));
+          if (soundOn) playPacketWin();
+        }, 450 + k * 350),
+      );
+    });
+    timers.current.push(
+      setTimeout(() => {
+        if (token === grantToken.current) setAllRevealed(true);
+      }, 450 + (order.length - 1) * 350 + 350),
+    );
+
+    void claimAll(token);
+  };
+
   const handlePick = (index: number) => {
-    if (picked !== null || granting) return;
+    if (picked !== null || granting || (isFullGrade && openedAll)) return;
+    if (isFullGrade) {
+      openAll(index);
+      return;
+    }
+
     const token = ++grantToken.current;
     const slot = layout[index];
     const coins = slot.kind === 'coin' ? slot.coins : null;
@@ -125,6 +194,10 @@ export function RedPacketDialog({ open, onClose }: RedPacketDialogProps) {
   };
 
   const retryClaim = () => {
+    if (isFullGrade) {
+      void claimAll(grantToken.current);
+      return;
+    }
     if (picked === null) return;
     const slot = layout[picked];
     if (slot.kind !== 'coin') return;
@@ -132,7 +205,12 @@ export function RedPacketDialog({ open, onClose }: RedPacketDialogProps) {
   };
 
   const chosenSlot = picked !== null ? layout[picked] : null;
+  /** 整年级 3 个红包的金币总额 */
+  const totalCoins = layout.reduce((sum, slot) => sum + (slot.kind === 'coin' ? slot.coins : 0), 0);
   const canClose = allRevealed && !granting && !grantError;
+  const started = isFullGrade ? openedAll : picked !== null;
+
+  const primaryDisabled = isFullGrade ? (openedAll ? !canClose : false) : !canClose;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && canClose && onClose()}>
@@ -140,14 +218,29 @@ export function RedPacketDialog({ open, onClose }: RedPacketDialogProps) {
         <DialogHeader className="justify-center">
           <DialogTitle className="flex items-center gap-2">
             <Gift className="h-5 w-5 text-[#e0463c]" />
-            幸运红包
+            {isFullGrade ? '整年级通关红包' : '幸运红包'}
           </DialogTitle>
         </DialogHeader>
 
         <div className="px-5 pb-5 pt-2 text-center">
-          <p className="mb-5 text-[13.5px] text-muted-foreground">
-            恭喜通关！<b className="text-[#e0463c]">3 个红包中有 1 个藏着金币</b>
-            ，选一个点开试试手气
+          <p className="mb-5 text-[13.5px] leading-6 text-muted-foreground">
+            {isFullGrade ? (
+              <>
+                恭喜通关整个年级！<b className="text-[#e0463c]">3 个红包全部有金币</b>
+                ，其中 1 个至少 10 金币，点任意红包即可全部拆开
+              </>
+            ) : reward.unitCount > 1 ? (
+              <>
+                恭喜通关！已选 <b className="text-[#e0463c]">{reward.unitCount}</b> 个单元，
+                金币奖励按 <b className="text-[#e0463c]">{reward.unitCount} 倍</b> 加成（单个红包最高
+                100 金币）；<b className="text-[#e0463c]">3 个红包中有 1 个藏着金币</b>
+              </>
+            ) : (
+              <>
+                恭喜通关！<b className="text-[#e0463c]">3 个红包中有 1 个藏着金币</b>
+                ，选一个点开试试手气
+              </>
+            )}
           </p>
 
           <div className="flex items-start justify-center gap-3 sm:gap-5">
@@ -158,14 +251,14 @@ export function RedPacketDialog({ open, onClose }: RedPacketDialogProps) {
                 <div className="packet-scene" key={i}>
                   <button
                     type="button"
-                    disabled={picked !== null}
+                    disabled={isFullGrade ? openedAll : picked !== null}
                     onClick={() => handlePick(i)}
                     aria-label={`红包 ${i + 1}`}
                     className={[
                       'packet',
                       isFlipped ? 'is-flipped' : '',
                       hopping === i ? 'is-hopping' : '',
-                      picked !== null && !isPicked && !isFlipped ? 'is-dimmed' : '',
+                      !isFullGrade && picked !== null && !isPicked && !isFlipped ? 'is-dimmed' : '',
                     ].join(' ')}
                     style={{ animationDelay: `${i * 0.35}s` }}
                   >
@@ -197,7 +290,24 @@ export function RedPacketDialog({ open, onClose }: RedPacketDialogProps) {
             })}
           </div>
 
-          {picked !== null && flipped.includes(picked) && chosenSlot && (
+          {isFullGrade && openedAll && allRevealed && (
+            <div className="prize-card mx-auto mt-5 flex max-w-[320px] items-center gap-3 rounded-2xl border-[1.5px] border-[#f3d8a4] bg-[#fffaf0] px-4 py-2.5 text-left">
+              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#ffe9bf]">
+                <Coins className="h-6 w-6 text-[#e08a1e]" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-extrabold text-[#d97706]">
+                  +{totalCoins} 金币
+                  {granting ? '（领取中…）' : ''}
+                </p>
+                <p className="text-[12.5px] text-muted-foreground">
+                  {grantError ? '领取失败，请重试' : '3 个红包的金币已全部存入「我的奖励」'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!isFullGrade && picked !== null && flipped.includes(picked) && chosenSlot && (
             <div className="prize-card mx-auto mt-5 flex max-w-[320px] items-center gap-3 rounded-2xl border-[1.5px] border-[#f3d8a4] bg-[#fffaf0] px-4 py-2.5 text-left">
               <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#ffe9bf]">
                 {chosenSlot.kind === 'coin' ? (
@@ -240,14 +350,26 @@ export function RedPacketDialog({ open, onClose }: RedPacketDialogProps) {
           <Button
             className="mt-4 min-w-[180px]"
             size="lg"
-            disabled={!canClose}
-            onClick={onClose}
+            disabled={primaryDisabled}
+            onClick={() => {
+              if (isFullGrade && !openedAll) {
+                openAll(0);
+                return;
+              }
+              if (canClose) onClose();
+            }}
           >
-            {picked === null
-              ? '请先选择一个红包'
-              : !allRevealed
-                ? '红包揭晓中…'
-                : '查看战绩'}
+            {isFullGrade
+              ? openedAll
+                ? allRevealed
+                  ? '查看战绩'
+                  : '红包揭晓中…'
+                : '点任意红包，拆开 3 份金币'
+              : !started
+                ? '请先选择一个红包'
+                : !allRevealed
+                  ? '红包揭晓中…'
+                  : '查看战绩'}
           </Button>
         </div>
       </DialogContent>

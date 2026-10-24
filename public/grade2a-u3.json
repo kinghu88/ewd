@@ -1,0 +1,17 @@
+[
+    { "name": "go",     "trans": ["走", "去"] },
+    { "name": "zoo",    "trans": ["动物园"] },
+    { "name": "tiger",  "trans": ["虎", "老虎"] },
+    { "name": "fox",    "trans": ["狐狸"] },
+    { "name": "monkey", "trans": ["猴"] },
+    { "name": "eat",    "trans": ["吃"] },
+    { "name": "king",   "trans": ["国王"] },
+    { "name": "of",     "trans": ["属于……的"] },
+    { "name": "animal", "trans": ["动物"] },
+    { "name": "show",   "trans": ["给……看", "出示"] },
+    { "name": "come",   "trans": ["来；来到"] },
+    { "name": "with",   "trans": ["和……一起"] },
+    { "name": "run",    "trans": ["跑", "奔跑"] },
+    { "name": "deer",   "trans": ["鹿"] },
+    { "name": "fly",    "trans": ["飞", "飞翔"] }
+]

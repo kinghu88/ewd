@@ -1,0 +1,8 @@
+[
+    { "name": "put",  "trans": ["放", "放置"] },
+    { "name": "head", "trans": ["头", "头部"] },
+    { "name": "neck", "trans": ["颈", "脖子"] },
+    { "name": "arm",  "trans": ["手臂"] },
+    { "name": "body", "trans": ["身体", "躯体"] },
+    { "name": "leg",  "trans": ["腿"] }
+]

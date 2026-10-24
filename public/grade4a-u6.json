@@ -1,0 +1,21 @@
+[
+    { "name": "wheel",        "trans": ["车轮"] },
+    { "name": "left",         "trans": ["向左", "朝左"] },
+    { "name": "straight",     "trans": ["笔直地"] },
+    { "name": "library",      "trans": ["图书室；图书馆"] },
+    { "name": "centre",       "trans": ["中心"] },
+    { "name": "cinema",       "trans": ["电影院"] },
+    { "name": "hospital",     "trans": ["医院"] },
+    { "name": "supermarket",  "trans": ["超市"] },
+    { "name": "museum",       "trans": ["博物馆", "博物院"] },
+    { "name": "tomorrow",     "trans": ["（在）明天"] },
+    { "name": "woman",        "trans": ["成年女子", "妇女"] },
+    { "name": "wish",         "trans": ["愿望"] },
+    { "name": "step",         "trans": ["步；一步（的距离）"] },
+    { "name": "own",          "trans": ["自己的"] },
+    { "name": "on one's own", "trans": ["独立地"] },
+    { "name": "cross",        "trans": ["横穿"] },
+    { "name": "careful",      "trans": ["谨慎的"] },
+    { "name": "be careful",   "trans": ["当心", "小心"] },
+    { "name": "underground",  "trans": ["在地（面）下"] }
+]

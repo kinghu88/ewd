@@ -67,12 +67,22 @@ export function RewardsModal({ open, onOpenChange }: RewardsModalProps) {
 
           <h3 className="mb-2.5 mt-5 flex items-center gap-1.5 text-[14.5px] font-bold">
             <Sparkles className="h-4 w-4 text-[#e08a1e]" />
-            通关红包概率
+            通关红包规则
           </h3>
-          <p className="text-[12.5px] leading-5 text-muted-foreground">
-            每轮 3 个红包中有且仅有 <b className="text-[#9a6414]">1 个藏着金币</b>，另外 2
-            个是鼓励成语；金币数额随机，数额越大越稀有，最高 100 金币。
-          </p>
+          <div className="space-y-1.5 text-[12.5px] leading-5 text-muted-foreground">
+            <p>
+              普通闯关：每轮 3 个红包中有且仅有 <b className="text-[#9a6414]">1 个藏着金币</b>
+              ，另外 2 个是鼓励成语，金币数额越大越稀有。
+            </p>
+            <p>
+              多单元闯关：红包金币按所选单元数量提升，
+              <b className="text-[#9a6414]">单个红包最高 100 金币</b>。
+            </p>
+            <p>
+              整年级全部单元：发放 3 个红包，<b className="text-[#9a6414]">每个红包都有金币</b>
+              ，其中 1 个至少 10 金币，单个红包最高 100 金币；整轮共享 10 颗心，小关卡失败不可重试。
+            </p>
+          </div>
         </DialogBody>
 
         <DialogFooter>

@@ -1,0 +1,15 @@
+[
+    { "name": "friendship", "trans": ["友谊", "朋友关系"] },
+    { "name": "unhappy",    "trans": ["伤心的", "难过的", "不开心的"] },
+    { "name": "both",       "trans": ["两个都"] },
+    { "name": "funny",      "trans": ["有趣的"] },
+    { "name": "musical",    "trans": ["擅长音乐的；对音乐感兴趣的"] },
+    { "name": "er",         "trans": ["嗯", "哦"] },
+    { "name": "rabbit",     "trans": ["兔"] },
+    { "name": "key",        "trans": ["关键"] },
+    { "name": "parent",     "trans": ["父", "母"] },
+    { "name": "tip",        "trans": ["窍门", "忠告", "建议"] },
+    { "name": "similar",    "trans": ["相似的"] },
+    { "name": "plan",       "trans": ["计划"] },
+    { "name": "openly",     "trans": ["坦诚地"] }
+]

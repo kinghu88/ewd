@@ -1,0 +1,15 @@
+[
+    { "name": "dad",        "trans": ["爸爸"] },
+    { "name": "brother",    "trans": ["哥哥；弟弟"] },
+    { "name": "sister",     "trans": ["姐姐；妹妹"] },
+    { "name": "grandpa",    "trans": ["爷爷；外公"] },
+    { "name": "grandma",    "trans": ["奶奶；外婆"] },
+    { "name": "love",       "trans": ["爱", "关爱"] },
+    { "name": "we",         "trans": ["我们"] },
+    { "name": "each",       "trans": ["每个"] },
+    { "name": "each other", "trans": ["互相", "彼此"] },
+    { "name": "birthday",   "trans": ["生日"] },
+    { "name": "for",        "trans": ["给"] },
+    { "name": "baby",       "trans": ["婴儿"] },
+    { "name": "family",     "trans": ["家庭"] }
+]

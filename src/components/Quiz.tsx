@@ -3,7 +3,7 @@ import { ArrowLeft, BookText, Crosshair, Flame, Heart, Volume2, VolumeX } from '
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { levelRange, LEVEL_LIVES, useQuizStore, selectCorrectCount } from '@/store/useQuizStore';
+import { levelRange, useQuizStore, selectCorrectCount } from '@/store/useQuizStore';
 import { speakEnglish, stopSpeaking } from '@/lib/speech';
 import { playCorrect, playFirstBlood, playWrong } from '@/lib/sfx';
 import { FIRST_BLOOD, tierOf, type ComboTier } from '@/lib/combo';
@@ -34,6 +34,8 @@ export function Quiz() {
   const levelCount = useQuizStore((s) => s.levelCount);
   const levels = useQuizStore((s) => s.levels);
   const lives = useQuizStore((s) => s.lives);
+  const initialLives = useQuizStore((s) => s.initialLives);
+  const challengeReward = useQuizStore((s) => s.challengeReward);
   const setSetting = useQuizStore((s) => s.setSetting);
   const setLetter = useQuizStore((s) => s.setLetter);
   const clearLetters = useQuizStore((s) => s.clearLetters);
@@ -268,10 +270,13 @@ export function Quiz() {
             {combo} 连击
           </span>
         )}
-        {/* 闯关三颗心：答错 / 超时扣 1 颗 */}
+        {/* 闯关生命：答错 / 超时扣 1 颗；整年级为整轮共享 10 颗 */}
         {isChallenge && (
-          <span className="inline-flex items-center gap-1" aria-label={`剩余 ${lives} 颗心`}>
-            {Array.from({ length: LEVEL_LIVES }, (_, i) => (
+          <span
+            className="inline-flex items-center gap-1"
+            aria-label={`剩余 ${lives} 颗心${challengeReward.fullGrade ? '（整轮共用）' : ''}`}
+          >
+            {Array.from({ length: initialLives }, (_, i) => (
               <Heart
                 key={`${i}-${i < lives ? 'on' : 'off'}`}
                 className={cn(
@@ -282,6 +287,9 @@ export function Quiz() {
                 )}
               />
             ))}
+            {challengeReward.fullGrade && (
+              <span className="ml-0.5 text-[11px] font-medium text-muted-foreground">整轮</span>
+            )}
           </span>
         )}
         <span className="flex-1" />

@@ -174,11 +174,18 @@ export const rewardsApi = {
   get() {
     return request<ServerRewards>('/api/rewards');
   },
-  /** 红包金币到账（服务端校验 1~100 整数） */
+  /** 单个红包金币到账（服务端校验 1~100 整数） */
   grant(coins: number) {
     return request<ServerRewards>('/api/rewards/grant', {
       method: 'POST',
       body: JSON.stringify({ coins }),
+    });
+  },
+  /** 整年级全部单元通关：一次性领取多个红包（每个 1~100 整数，服务端事务到账） */
+  grantPackets(packets: number[]) {
+    return request<ServerRewards>('/api/rewards/grant', {
+      method: 'POST',
+      body: JSON.stringify({ packets }),
     });
   },
   /** 闯完全部小关：通关轮数 +1，失败静默（不阻断答题流程） */

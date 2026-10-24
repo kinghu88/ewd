@@ -1,0 +1,13 @@
+[
+    { "name": "apple",    "trans": ["苹果"] },
+    { "name": "banana",   "trans": ["香蕉"] },
+    { "name": "milk",     "trans": ["（牛或羊的）奶"] },
+    { "name": "about",    "trans": ["关于"] },
+    { "name": "picnic",   "trans": ["野餐"] },
+    { "name": "day",      "trans": ["一天", "一日"] },
+    { "name": "bread",    "trans": ["面包"] },
+    { "name": "meat",     "trans": ["（供食用的）肉"] },
+    { "name": "food",     "trans": ["食物"] },
+    { "name": "shopping", "trans": ["买东西", "购物"] },
+    { "name": "list",     "trans": ["名单", "清单"] }
+]

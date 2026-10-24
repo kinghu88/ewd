@@ -135,23 +135,38 @@ app.get('/api/rewards', authRequired, (req, res) => {
   res.json({ coins: req.user.coins, runs: req.user.runs });
 });
 
-/** 抽奖到账：金币数必须是 1~100 的整数，原子自增并记流水 */
+/**
+ * 红包到账：支持单包 `coins`（1~100 整数）或整年级多包 `packets`（每包 1~100 整数）。
+ * 多包在同一个事务里原子累加并逐包记流水，避免部分到账。
+ */
 app.post('/api/rewards/grant', authRequired, (req, res) => {
-  const coins = Number(req.body?.coins);
-  if (!Number.isInteger(coins) || coins < MIN_PRIZE || coins > MAX_PRIZE) {
+  const rawPackets = req.body?.packets;
+  const packets = Array.isArray(rawPackets)
+    ? rawPackets.map(Number)
+    : [Number(req.body?.coins)];
+  if (packets.length < 1 || packets.length > 3) {
+    return res.status(400).json({ message: '一次最多领取 3 个红包' });
+  }
+  if (!packets.every((n) => Number.isInteger(n) && n >= MIN_PRIZE && n <= MAX_PRIZE)) {
     return res.status(400).json({ message: `金币数额必须是 ${MIN_PRIZE}~${MAX_PRIZE} 的整数` });
   }
+  const total = packets.reduce((sum, n) => sum + n, 0);
   const row = db
     .transaction(() => {
-      db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(coins, req.user.id);
+      db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(total, req.user.id);
       const updated = db.prepare('SELECT coins, runs FROM users WHERE id = ?').get(req.user.id);
-      db.prepare(
+      const insert = db.prepare(
         `INSERT INTO coin_transactions (user_id, change, balance_after, source, ref, created_at)
          VALUES (?, ?, ?, 'redpacket', 'redpacket', ?)`,
-      ).run(req.user.id, coins, updated.coins, Date.now());
+      );
+      let balance = updated.coins - total;
+      for (const coins of packets) {
+        balance += coins;
+        insert.run(req.user.id, coins, balance, Date.now());
+      }
       return updated;
     })();
-  res.json(row);
+  res.json({ ...row, granted: packets });
 });
 
 /** 闯完全部小关：通关轮数 +1 */

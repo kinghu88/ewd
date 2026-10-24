@@ -1,0 +1,22 @@
+[
+    { "name": "eye",       "trans": ["眼睛"] },
+    { "name": "face",      "trans": ["脸", "面部"] },
+    { "name": "mouth",     "trans": ["嘴"] },
+    { "name": "nose",      "trans": ["鼻子"] },
+    { "name": "snowman",   "trans": ["雪人"] },
+    { "name": "same",      "trans": ["相同的"] },
+    { "name": "twin",      "trans": ["双胞胎中的一个"] },
+    { "name": "big",       "trans": ["大的"] },
+    { "name": "small",     "trans": ["小的"] },
+    { "name": "people",    "trans": ["人们"] },
+    { "name": "often",     "trans": ["经常"] },
+    { "name": "us",        "trans": ["我们"] },
+    { "name": "wrong",     "trans": ["不正确地", "错误地"] },
+    { "name": "can",       "trans": ["能", "会"] },
+    { "name": "idea",      "trans": ["建议；想法"] },
+    { "name": "long",      "trans": ["长的"] },
+    { "name": "hair",      "trans": ["头发"] },
+    { "name": "short",     "trans": ["短的"] },
+    { "name": "different", "trans": ["不同的", "不一样的"] },
+    { "name": "now",       "trans": ["现在", "此刻"] }
+]

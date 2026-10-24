@@ -1,0 +1,12 @@
+[
+    { "name": "talent", "trans": ["天资", "天赋", "才能"] },
+    { "name": "act",    "trans": ["演出；扮演"] },
+    { "name": "magic",  "trans": ["魔术", "戏法"] },
+    { "name": "shine",  "trans": ["表现突出", "出众"] },
+    { "name": "puzzle", "trans": ["拼图游戏"] },
+    { "name": "dancer", "trans": ["舞蹈演员"] },
+    { "name": "win",    "trans": ["获胜", "赢"] },
+    { "name": "just",   "trans": ["就", "只是"] },
+    { "name": "boy",    "trans": ["男孩；儿子"] },
+    { "name": "slowly", "trans": ["缓慢地", "慢慢地"] }
+]

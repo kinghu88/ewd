@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Eye, FileQuestion, Layers, Play, Shuffle, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { useQuizStore } from '@/store/useQuizStore';
+import { FULL_GRADE_LIVES, useQuizStore } from '@/store/useQuizStore';
 import { cn } from '@/lib/utils';
 import {
   fetchLevelWords,
@@ -85,7 +85,7 @@ function ChallengeToggle() {
         aria-label="闯关模式"
       />
       <Swords className="h-4 w-4 text-[#e08a1e]" />
-      闯关模式（一个单元为一关、三颗心，闯完所选单元可抽幸运大奖）
+      闯关模式（一个单元为一关；普通挑战每关 3 颗心，整年级整轮共 10 颗心）
     </label>
   );
 }
@@ -240,7 +240,10 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
         const levels: QuizLevel[] = selectedRefs
           .map((ref, i) => ({ title: unitTitle(ref), words: groups[i] ?? [] }))
           .filter((lv) => lv.words.length > 0);
-        startQuiz(groups.flat(), title, 'challenge', levels);
+        startQuiz(groups.flat(), title, 'challenge', levels, {
+          unitCount: Math.max(1, totalSelected),
+          fullGrade: isAllPicked,
+        });
       } else {
         startQuiz(groups.flat(), title);
       }
@@ -385,6 +388,23 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
               共 <span className="font-bold text-primary">{totalWords}</span> 个单词
             </span>
           </div>
+
+          {challenge && totalSelected > 0 && (
+            <p className="mt-3 rounded-xl border border-[#f0c98a] bg-[#fff6e6] px-3.5 py-2 text-[13px] leading-6 text-[#a86a1e]">
+              {isAllPicked ? (
+                <>
+                  <b>整年级专属奖励：</b>3 个红包全部含金币，其中 1 个至少 10 金币（单包最高 100）
+                  · 整轮共 <b>{FULL_GRADE_LIVES} 颗心</b>，小关卡失败不可重试
+                </>
+              ) : totalSelected > 1 ? (
+                <>
+                  <b>多单元加成：</b>红包金币按已选 {totalSelected} 个单元提升（单包最高 100 金币）
+                </>
+              ) : (
+                <>通关后可拆 3 个红包，其中 1 个藏着金币</>
+              )}
+            </p>
+          )}
 
           <div className="mt-4 space-y-5">
             {stage.groups.map((group) => {

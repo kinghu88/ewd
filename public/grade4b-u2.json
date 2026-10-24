@@ -1,0 +1,20 @@
+[
+    { "name": "laugh",   "trans": ["发出笑声", "（大）笑"] },
+    { "name": "sad",     "trans": ["不愉快的", "伤心的", "难过的"] },
+    { "name": "scared",  "trans": ["害怕的", "恐惧的；紧张的"] },
+    { "name": "angry",   "trans": ["发怒的", "生气的", "气愤的"] },
+    { "name": "excited", "trans": ["兴奋的", "激动的"] },
+    { "name": "opera",   "trans": ["歌剧"] },
+    { "name": "next",    "trans": ["（时间）紧接着的；下次的"] },
+    { "name": "cough",   "trans": ["咳嗽", "咳"] },
+    { "name": "better",  "trans": ["（健康状况）好转的；（疼痛", "伤势等）减轻的"] },
+    { "name": "gift",    "trans": ["礼物"] },
+    { "name": "model",   "trans": ["（尤指可拼装的）模型"] },
+    { "name": "shout",   "trans": ["大声说", "喊叫", "呼喊"] },
+    { "name": "should",  "trans": ["应当", "应该"] },
+    { "name": "feeling", "trans": ["感觉", "感触"] },
+    { "name": "huge",    "trans": ["巨大的"] },
+    { "name": "worried", "trans": ["担心的", "焦虑的"] },
+    { "name": "street",  "trans": ["大街", "街道"] },
+    { "name": "hit",     "trans": ["撞击", "碰撞"] }
+]

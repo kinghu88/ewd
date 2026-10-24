@@ -28,7 +28,7 @@ export type ViewName = 'home' | 'quiz' | 'result';
 /** 默写模式：普通默写 / 闯关 */
 export type QuizMode = 'normal' | 'challenge';
 
-/** 闯关关卡结算弹层：过关 / 失败（三颗心用尽） / 全部通关 */
+/** 闯关关卡结算弹层：过关 / 失败（生命用尽） / 全部通关 */
 export type GateKind = 'pass' | 'fail' | 'complete';
 
 /** 确认瞬间的对错闪烁反馈 */

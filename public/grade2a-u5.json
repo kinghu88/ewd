@@ -1,0 +1,23 @@
+[
+    { "name": "festival",    "trans": ["节日；节庆"] },
+    { "name": "best",        "trans": ["最好的"] },
+    { "name": "wish",        "trans": ["希望", "愿望"] },
+    { "name": "celebrate",   "trans": ["庆祝"] },
+    { "name": "wear",        "trans": ["穿"] },
+    { "name": "clothes",     "trans": ["衣服", "衣物"] },
+    { "name": "mean",        "trans": ["意思是"] },
+    { "name": "luck",        "trans": ["好运", "幸运"] },
+    { "name": "these",       "trans": ["这些"] },
+    { "name": "lantern",     "trans": ["灯笼"] },
+    { "name": "they",        "trans": ["它们；他们；她们"] },
+    { "name": "beautiful",   "trans": ["美丽的"] },
+    { "name": "also",        "trans": ["也", "而且", "除此之外"] },
+    { "name": "paper-cut",   "trans": ["剪纸"] },
+    { "name": "wow",         "trans": ["呀", "哇"] },
+    { "name": "some",        "trans": ["一些"] },
+    { "name": "candy",       "trans": ["糖果"] },
+    { "name": "lucky",       "trans": ["运气好的", "幸运的"] },
+    { "name": "new",         "trans": ["新的"] },
+    { "name": "year",        "trans": ["年"] },
+    { "name": "interesting", "trans": ["有趣的", "吸引人的"] }
+]

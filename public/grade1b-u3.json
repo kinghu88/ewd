@@ -1,0 +1,10 @@
+[
+    { "name": "dog",    "trans": ["狗"] },
+    { "name": "woof",   "trans": ["汪汪（狗吠声）"] },
+    { "name": "cat",    "trans": ["猫"] },
+    { "name": "miaow",  "trans": ["喵（猫叫声）"] },
+    { "name": "fish",   "trans": ["鱼"] },
+    { "name": "rabbit", "trans": ["兔"] },
+    { "name": "pet",    "trans": ["宠物"] },
+    { "name": "have",   "trans": ["有"] }
+]

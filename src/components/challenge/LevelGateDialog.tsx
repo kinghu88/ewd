@@ -6,7 +6,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { LEVEL_LIVES, useQuizStore } from '@/store/useQuizStore';
+import { useQuizStore } from '@/store/useQuizStore';
 import { RedPacketDialog } from './RedPacketDialog';
 
 /** 闯关结算弹层：过关 / 失败 / 全部通关（通关后进入幸运红包） */
@@ -18,6 +18,8 @@ export function LevelGateDialog() {
   const currentLevelTitle = levels[levelIndex]?.title ?? '';
   const nextLevelTitle = levels[levelIndex + 1]?.title ?? '';
   const lives = useQuizStore((s) => s.lives);
+  const initialLives = useQuizStore((s) => s.initialLives);
+  const challengeReward = useQuizStore((s) => s.challengeReward);
   const nextLevel = useQuizStore((s) => s.nextLevel);
   const retryLevel = useQuizStore((s) => s.retryLevel);
   const finishRun = useQuizStore((s) => s.finishRun);
@@ -44,15 +46,15 @@ export function LevelGateDialog() {
                 <h2 className="mt-4 text-[22px] font-extrabold">
                   第 {levelIndex + 1} 关{currentLevelTitle ? ` · ${currentLevelTitle}` : ''} 通过！
                 </h2>
-                <p className="mt-2 flex items-center justify-center gap-1 text-[14px] text-muted-foreground">
+                <p className="mt-2 flex flex-wrap items-center justify-center gap-1 text-[14px] text-muted-foreground">
                   还剩
-                  {Array.from({ length: LEVEL_LIVES }, (_, i) => (
+                  {Array.from({ length: initialLives }, (_, i) => (
                     <Heart
                       key={i}
                       className={`h-[18px] w-[18px] ${i < lives ? 'fill-[#ef5a6a] text-[#ef5a6a]' : 'text-[#d4dce8]'}`}
                     />
                   ))}
-                  ，继续冲下一关
+                  {challengeReward.fullGrade ? '，整轮生命继续保留，继续冲下一关' : '，继续冲下一关'}
                 </p>
                 <Button size="lg" className="mt-6 w-full" onClick={nextLevel}>
                   {nextLevelTitle
@@ -69,22 +71,46 @@ export function LevelGateDialog() {
                   <HeartCrack className="h-11 w-11 text-destructive" />
                 </span>
                 <h2 className="mt-4 text-[22px] font-extrabold">
-                  第 {levelIndex + 1} 关{currentLevelTitle ? ` · ${currentLevelTitle}` : ''} 挑战失败
+                  {challengeReward.fullGrade
+                    ? '整年级挑战失败'
+                    : `第 ${levelIndex + 1} 关${currentLevelTitle ? ` · ${currentLevelTitle}` : ''} 挑战失败`}
                 </h2>
                 <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
-                  三颗心都用完了，别灰心！
-                  <br />
-                  本关答错的单词已收入错词本，再来一次一定能过
+                  {challengeReward.fullGrade ? (
+                    <>
+                      整轮 {initialLives} 颗心已全部用完，本次闯关结束。
+                      <br />
+                      整年级模式下小关卡失败不可重试，答错的单词已收入错词本
+                    </>
+                  ) : (
+                    <>
+                      {initialLives} 颗心都用完了，别灰心！
+                      <br />
+                      本关答错的单词已收入错词本，再来一次一定能过
+                    </>
+                  )}
                 </p>
-                <div className="mt-6 flex gap-3">
-                  <Button variant="outline" size="lg" className="flex-1" onClick={goHome}>
-                    <Home className="h-[18px] w-[18px]" />
-                    返回首页
-                  </Button>
-                  <Button size="lg" className="flex-[1.4]" onClick={retryLevel}>
-                    重新挑战本关
-                  </Button>
-                </div>
+                {challengeReward.fullGrade ? (
+                  <div className="mt-6 flex gap-3">
+                    <Button variant="outline" size="lg" className="flex-1" onClick={goHome}>
+                      <Home className="h-[18px] w-[18px]" />
+                      返回首页
+                    </Button>
+                    <Button size="lg" className="flex-[1.4]" onClick={finishRun}>
+                      查看战绩
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-6 flex gap-3">
+                    <Button variant="outline" size="lg" className="flex-1" onClick={goHome}>
+                      <Home className="h-[18px] w-[18px]" />
+                      返回首页
+                    </Button>
+                    <Button size="lg" className="flex-[1.4]" onClick={retryLevel}>
+                      重新挑战本关
+                    </Button>
+                  </div>
+                )}
               </>
             )}
 
@@ -97,7 +123,25 @@ export function LevelGateDialog() {
                 <p className="mt-2 text-[14px] leading-6 text-muted-foreground">
                   你已闯过全部 {levelCount} 关
                   <br />
-                  3 个红包中藏着 <b className="text-[#e08a1e]">1 份金币</b>，试试手气，最高 100 金币
+                  {challengeReward.fullGrade ? (
+                    <>
+                      <b className="text-[#e08a1e]">整年级奖励：3 个红包全部有金币</b>
+                      <br />
+                      其中 1 个至少 10 金币，单个红包最高 100 金币
+                    </>
+                  ) : challengeReward.unitCount > 1 ? (
+                    <>
+                      已选 <b className="text-[#e08a1e]">{challengeReward.unitCount} 个单元</b>，
+                      红包金币按 {challengeReward.unitCount} 倍加成
+                      <br />
+                      3 个红包中藏着 1 份金币，单个红包最高 100 金币
+                    </>
+                  ) : (
+                    <>
+                      3 个红包中藏着 <b className="text-[#e08a1e]">1 份金币</b>
+                      ，试试手气，最高 100 金币
+                    </>
+                  )}
                 </p>
                 <Button size="lg" className="mt-6 w-full" onClick={() => setPacketOpen(true)}>
                   <Trophy className="h-[18px] w-[18px]" />
@@ -118,6 +162,7 @@ export function LevelGateDialog() {
 
       <RedPacketDialog
         open={gate === 'complete' && packetOpen}
+        reward={challengeReward}
         onClose={() => {
           setPacketOpen(false);
           finishRun();

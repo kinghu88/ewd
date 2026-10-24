@@ -1,0 +1,21 @@
+[
+    { "name": "waste",     "trans": ["废料", "废弃物"] },
+    { "name": "plastic",   "trans": ["塑料制的；塑料"] },
+    { "name": "throw",     "trans": ["扔"] },
+    { "name": "useful",    "trans": ["有用的", "有益的"] },
+    { "name": "Yours",     "trans": ["（用于书信结尾）你真挚的"] },
+    { "name": "recycle",   "trans": ["再利用", "回收利用"] },
+    { "name": "each",      "trans": ["每个", "各"] },
+    { "name": "over",      "trans": ["大于", "高于", "超出"] },
+    { "name": "metal",     "trans": ["金属"] },
+    { "name": "into",      "trans": ["（表示状态的改变）；进入", "到……里面"] },
+    { "name": "turn into", "trans": ["变成"] },
+    { "name": "newspaper", "trans": ["报纸"] },
+    { "name": "flat",      "trans": ["平的"] },
+    { "name": "beginning", "trans": ["开始", "开端", "起点"] },
+    { "name": "off",       "trans": ["从（某物）上移开"] },
+    { "name": "take off",  "trans": ["拿掉；移去"] },
+    { "name": "seat",      "trans": ["座", "座位"] },
+    { "name": "land",      "trans": ["陆地"] },
+    { "name": "shop",      "trans": ["商店"] }
+]

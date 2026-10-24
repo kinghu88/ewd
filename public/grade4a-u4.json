@@ -1,0 +1,18 @@
+[
+    { "name": "season",         "trans": ["季节"] },
+    { "name": "spring",         "trans": ["春天", "春季"] },
+    { "name": "summer",         "trans": ["夏天", "夏季"] },
+    { "name": "autumn",         "trans": ["秋天", "秋季"] },
+    { "name": "winter",         "trans": ["冬天", "冬季"] },
+    { "name": "favourite",      "trans": ["最喜欢的"] },
+    { "name": "birthday",       "trans": ["生日"] },
+    { "name": "fly",            "trans": ["放飞"] },
+    { "name": "snowstorm",      "trans": ["雪暴", "暴风雪"] },
+    { "name": "beach",          "trans": ["海滩", "沙滩"] },
+    { "name": "sea",            "trans": ["海", "海洋"] },
+    { "name": "equator",        "trans": ["赤道"] },
+    { "name": "round",          "trans": ["循环地", "周而复始地"] },
+    { "name": "all year round", "trans": ["全年"] },
+    { "name": "quite",          "trans": ["非常", "十分"] },
+    { "name": "join",           "trans": ["参与", "加入"] }
+]

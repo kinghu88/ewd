@@ -1,0 +1,21 @@
+[
+    { "name": "drama",    "trans": ["戏剧"] },
+    { "name": "trip",     "trans": ["旅游；旅行", "出行"] },
+    { "name": "fair",     "trans": ["集市；义卖会；户外游艺会"] },
+    { "name": "festival", "trans": ["节", "节庆", "汇演"] },
+    { "name": "horn",     "trans": ["角"] },
+    { "name": "dot",      "trans": ["点", "小圆点"] },
+    { "name": "raindrop", "trans": ["雨点", "雨滴"] },
+    { "name": "more",     "trans": ["更多的"] },
+    { "name": "special",  "trans": ["特殊的", "特别的"] },
+    { "name": "keeper",   "trans": ["看守人", "保管人"] },
+    { "name": "hey",      "trans": ["嘿", "喂"] },
+    { "name": "lovely",   "trans": ["美好的；令人愉快的；可爱的"] },
+    { "name": "student",  "trans": ["学生"] },
+    { "name": "culture",  "trans": ["文化"] },
+    { "name": "hour",     "trans": ["小时"] },
+    { "name": "note",     "trans": ["笔记", "记录"] },
+    { "name": "vote",     "trans": ["选票"] },
+    { "name": "design",   "trans": ["设计"] },
+    { "name": "hometown", "trans": ["家乡", "故乡"] }
+]

@@ -1,0 +1,17 @@
+[
+    { "name": "pencil",         "trans": ["铅笔"] },
+    { "name": "ruler",          "trans": ["尺子", "直尺"] },
+    { "name": "all",            "trans": ["全部", "所有"] },
+    { "name": "schoolbag",      "trans": ["书包"] },
+    { "name": "eraser",         "trans": ["橡皮"] },
+    { "name": "book",           "trans": ["书", "书籍"] },
+    { "name": "share",          "trans": ["共享；共用", "合用"] },
+    { "name": "oh",             "trans": ["啊", "哎呀"] },
+    { "name": "pencil case",    "trans": ["笔袋；铅笔盒"] },
+    { "name": "and",            "trans": ["和", "与"] },
+    { "name": "English",        "trans": ["英语"] },
+    { "name": "don't = do not", "trans": ["不要"] },
+    { "name": "worry",          "trans": ["担心；发愁"] },
+    { "name": "here",           "trans": ["在这里；给你"] },
+    { "name": "thank",          "trans": ["感谢", "向……表示谢意"] }
+]

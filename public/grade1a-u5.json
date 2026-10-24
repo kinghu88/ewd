@@ -1,0 +1,15 @@
+[
+    { "name": "good morning", "trans": ["早上好"] },
+    { "name": "teacher",      "trans": ["教师", "老师"] },
+    { "name": "this",         "trans": ["这", "这个"] },
+    { "name": "our",          "trans": ["我们的"] },
+    { "name": "classroom",    "trans": ["教室"] },
+    { "name": "blackboard",   "trans": ["黑板"] },
+    { "name": "desk",         "trans": ["书桌"] },
+    { "name": "chair",        "trans": ["椅子"] },
+    { "name": "clean",        "trans": ["（把……）弄干净", "清理"] },
+    { "name": "over",         "trans": ["结束的"] },
+    { "name": "floor",        "trans": ["地板", "地面"] },
+    { "name": "window",       "trans": ["窗户"] },
+    { "name": "door",         "trans": ["门"] }
+]
