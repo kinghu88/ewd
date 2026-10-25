@@ -21,6 +21,61 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MIN_PRIZE = 1;
 const MAX_PRIZE = 100;
 
+/* ------------------------------ 管理后台鉴权 ------------------------------ */
+
+const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const ADMIN_PASSWORD_FILE = path.join(__dirname, 'data', 'admin-password.txt');
+
+/**
+ * 管理密码：优先取环境变量 ADMIN_PASSWORD；
+ * 未配置时自动生成并持久化到 server/data/admin-password.txt（该目录已被 git 忽略）。
+ */
+function resolveAdminPassword() {
+  const fromEnv = String(process.env.ADMIN_PASSWORD ?? '').trim();
+  if (fromEnv) return fromEnv;
+  try {
+    if (fs.existsSync(ADMIN_PASSWORD_FILE)) {
+      const saved = fs.readFileSync(ADMIN_PASSWORD_FILE, 'utf8').trim();
+      if (saved) return saved;
+    }
+    const generated = crypto.randomBytes(9).toString('base64url');
+    fs.mkdirSync(path.dirname(ADMIN_PASSWORD_FILE), { recursive: true });
+    fs.writeFileSync(ADMIN_PASSWORD_FILE, `${generated}\n`, { mode: 0o600 });
+    console.log(`[admin] 已生成管理密码：${generated}`);
+    console.log('[admin] 密码已保存到 server/data/admin-password.txt，可通过 /admin 进入后台');
+    return generated;
+  } catch (err) {
+    console.error('[admin] 管理密码初始化失败，管理后台不可用', err);
+    return '';
+  }
+}
+
+const ADMIN_PASSWORD = resolveAdminPassword();
+/** 管理端登录会话（进程内，服务重启后需重新登录） */
+const adminSessions = new Map();
+
+function safeEqual(a, b) {
+  const ha = crypto.createHash('sha256').update(String(a)).digest();
+  const hb = crypto.createHash('sha256').update(String(b)).digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
+
+/** 管理端鉴权：x-admin-token 来自 /api/admin/login，与普通用户会话完全隔离 */
+function adminRequired(req, res, next) {
+  if (!ADMIN_PASSWORD) {
+    return res.status(503).json({ message: '服务端未配置管理密码，管理后台不可用' });
+  }
+  const header = req.headers['x-admin-token'];
+  const token = typeof header === 'string' ? header : null;
+  const expiresAt = token ? adminSessions.get(token) : undefined;
+  if (!token || !expiresAt || expiresAt < Date.now()) {
+    if (token) adminSessions.delete(token);
+    return res.status(401).json({ message: '管理登录已失效，请重新登录' });
+  }
+  next();
+}
+
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -348,6 +403,211 @@ app.post('/api/items/consume', authRequired, (req, res) => {
     }
     throw err;
   }
+});
+
+/* ------------------------------- 管理后台接口 ------------------------------- */
+
+app.post('/api/admin/login', (req, res) => {
+  if (!ADMIN_PASSWORD) {
+    return res.status(503).json({ message: '服务端未配置管理密码，管理后台不可用' });
+  }
+  const password = String(req.body?.password ?? '');
+  if (!safeEqual(password, ADMIN_PASSWORD)) {
+    return res.status(401).json({ message: '管理密码错误' });
+  }
+  const token = crypto.randomBytes(32).toString('hex');
+  adminSessions.set(token, Date.now() + ADMIN_SESSION_TTL_MS);
+  res.json({ token, expiresIn: ADMIN_SESSION_TTL_MS });
+});
+
+/** 商品字段校验：create 时 current=null；编辑时以库内值为默认，支持只传 active 等局部字段 */
+function parseShopItem(body, current = null) {
+  const kind = body.kind === undefined ? current?.kind : String(body.kind);
+  if (kind !== 'prop' && kind !== 'gift') {
+    return { error: '商品类型必须是 prop（道具）或 gift（实物礼物）' };
+  }
+
+  const name = String(body.name === undefined ? (current?.name ?? '') : body.name).trim();
+  if (name.length < 1 || name.length > 40) {
+    return { error: '商品名称需为 1~40 个字符' };
+  }
+
+  const description = String(
+    body.description === undefined ? (current?.description ?? '') : body.description,
+  ).trim();
+  if (description.length > 300) {
+    return { error: '商品描述最多 300 个字符' };
+  }
+
+  const priceCoins = Number(
+    body.price_coins === undefined ? current?.price_coins : body.price_coins,
+  );
+  if (!Number.isInteger(priceCoins) || priceCoins < 1 || priceCoins > 1000000) {
+    return { error: '价格需为 1~1000000 的金币整数' };
+  }
+
+  let stock = null;
+  if (kind === 'gift') {
+    const rawStock = body.stock === undefined ? current?.stock : body.stock;
+    if (rawStock === null || rawStock === undefined || rawStock === '') {
+      return { error: '实物礼物必须填写库存件数' };
+    }
+    stock = Number(rawStock);
+    if (!Number.isInteger(stock) || stock < 0 || stock > 1000000) {
+      return { error: '库存需为 0~1000000 的整数（0 表示已兑完）' };
+    }
+  }
+
+  const sort = Number(body.sort === undefined ? (current?.sort ?? 100) : body.sort);
+  if (!Number.isInteger(sort) || sort < 0 || sort > 100000) {
+    return { error: '排序需为 0~100000 的整数' };
+  }
+
+  const active = body.active === undefined ? (current?.active ?? 1) : body.active ? 1 : 0;
+
+  return { value: { kind, name, description, priceCoins, stock, sort, active } };
+}
+
+const ADMIN_ITEM_COLUMNS =
+  'id, kind, name, description, price_coins, stock, active, sort, created_at';
+
+function getAdminItem(id) {
+  return db.prepare(`SELECT ${ADMIN_ITEM_COLUMNS} FROM shop_items WHERE id = ?`).get(id);
+}
+
+/** 商品列表：包含已下架商品，供后台管理 */
+app.get('/api/admin/shop/items', adminRequired, (_req, res) => {
+  const items = db
+    .prepare(`SELECT ${ADMIN_ITEM_COLUMNS} FROM shop_items ORDER BY sort ASC, created_at DESC`)
+    .all();
+  res.json({ items });
+});
+
+/** 新增商品：SKU 可自定义（小写字母/数字/-/_），留空自动生成 */
+app.post('/api/admin/shop/items', adminRequired, (req, res) => {
+  const body = req.body ?? {};
+  const parsed = parseShopItem(body);
+  if (parsed.error) return res.status(400).json({ message: parsed.error });
+
+  const requestedId = String(body.id ?? '').trim();
+  const id = requestedId || `custom_${Date.now().toString(36)}_${crypto.randomBytes(2).toString('hex')}`;
+  if (!/^[a-z0-9][a-z0-9_-]{1,39}$/.test(id)) {
+    return res.status(400).json({ message: 'SKU 只能使用小写字母、数字、- 和 _，长度 2~40' });
+  }
+  if (getAdminItem(id)) {
+    return res.status(409).json({ message: '该 SKU 已存在，请换一个' });
+  }
+
+  const v = parsed.value;
+  db.prepare(
+    `INSERT INTO shop_items (id, kind, name, description, price_coins, stock, active, sort, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(id, v.kind, v.name, v.description, v.priceCoins, v.stock, v.active, v.sort, Date.now());
+
+  res.status(201).json({ item: getAdminItem(id) });
+});
+
+/** 编辑商品 / 上架下架：支持局部字段更新，商品一旦创建不可修改 SKU */
+app.patch('/api/admin/shop/items/:id', adminRequired, (req, res) => {
+  const current = getAdminItem(req.params.id);
+  if (!current) return res.status(404).json({ message: '商品不存在' });
+
+  const parsed = parseShopItem(req.body ?? {}, current);
+  if (parsed.error) return res.status(400).json({ message: parsed.error });
+
+  const v = parsed.value;
+  db.prepare(
+    `UPDATE shop_items
+        SET kind = ?, name = ?, description = ?, price_coins = ?, stock = ?, active = ?, sort = ?
+      WHERE id = ?`,
+  ).run(v.kind, v.name, v.description, v.priceCoins, v.stock, v.active, v.sort, current.id);
+
+  res.json({ item: getAdminItem(current.id) });
+});
+
+/* ------------------------------- 用户管理 ------------------------------- */
+
+const ADMIN_USER_COLUMNS = 'id, username, coins, runs, created_at';
+const ADMIN_COIN_CHANGE_MAX = 1000000;
+
+/** LIKE 查询转义，避免用户输入的 % _ 被当成通配符 */
+function escapeLike(input) {
+  return input.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
+/** 用户列表：按用户名 / ID 模糊搜索，含金币与通关轮数 */
+app.get('/api/admin/users', adminRequired, (req, res) => {
+  const q = String(req.query.q ?? '').trim();
+  const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 100));
+  const users = q
+    ? db
+        .prepare(
+          `SELECT ${ADMIN_USER_COLUMNS} FROM users
+            WHERE username LIKE ? ESCAPE '\\' OR CAST(id AS TEXT) = ?
+            ORDER BY id DESC LIMIT ?`,
+        )
+        .all(`%${escapeLike(q)}%`, q, limit)
+    : db.prepare(`SELECT ${ADMIN_USER_COLUMNS} FROM users ORDER BY id DESC LIMIT ?`).all(limit);
+  const total = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
+  res.json({ users, total });
+});
+
+/** 调整用户金币：正数增加、负数扣减，扣成负数会被拒绝，落账写流水 */
+app.post('/api/admin/users/:id/coins', adminRequired, (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId) || userId < 1) {
+    return res.status(404).json({ message: '用户不存在' });
+  }
+
+  const change = Number(req.body?.change);
+  if (!Number.isInteger(change) || change === 0) {
+    return res.status(400).json({ message: '调整数量必须是非 0 整数（正数增加，负数扣减）' });
+  }
+  if (Math.abs(change) > ADMIN_COIN_CHANGE_MAX) {
+    return res.status(400).json({ message: `单次调整绝对值不能超过 ${ADMIN_COIN_CHANGE_MAX} 金币` });
+  }
+  const note = String(req.body?.note ?? '').trim().slice(0, 100);
+
+  const result = db.transaction(() => {
+    const user = db.prepare(`SELECT ${ADMIN_USER_COLUMNS} FROM users WHERE id = ?`).get(userId);
+    if (!user) return { notFound: true };
+
+    const balance = user.coins + change;
+    if (balance < 0) {
+      return { message: `金币不足：当前 ${user.coins}，无法扣减 ${-change}` };
+    }
+
+    db.prepare('UPDATE users SET coins = ? WHERE id = ?').run(balance, userId);
+    db.prepare(
+      `INSERT INTO coin_transactions (user_id, change, balance_after, source, ref, created_at)
+       VALUES (?, ?, ?, 'admin_adjust', ?, ?)`,
+    ).run(userId, change, balance, note, Date.now());
+
+    return { user: { ...user, coins: balance } };
+  })();
+
+  if (result.notFound) return res.status(404).json({ message: '用户不存在' });
+  if (result.message) return res.status(409).json({ message: result.message });
+  res.json({ user: result.user });
+});
+
+/** 用户最近金币流水，便于后台对账 */
+app.get('/api/admin/users/:id/transactions', adminRequired, (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId) || userId < 1) {
+    return res.status(404).json({ message: '用户不存在' });
+  }
+  const user = db.prepare(`SELECT ${ADMIN_USER_COLUMNS} FROM users WHERE id = ?`).get(userId);
+  if (!user) return res.status(404).json({ message: '用户不存在' });
+
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+  const transactions = db
+    .prepare(
+      `SELECT id, change, balance_after, source, ref, created_at
+         FROM coin_transactions WHERE user_id = ? ORDER BY id DESC LIMIT ?`,
+    )
+    .all(userId, limit);
+  res.json({ user, transactions });
 });
 
 /* ------------------------------ 生产静态托管 ------------------------------ */

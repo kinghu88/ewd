@@ -11,10 +11,12 @@
   - 闯关模式：一个单元为一关，默认每关三颗生命（答错 / 超时扣心）；选择整个年级全部单元时整轮共享 10 颗生命且不清空，任一小关卡失败即整轮结束、不可重试，过关弹层结算，全部通关累计通关轮数
 - **连击播报**：MOBA 风格的 FIRST BLOOD / DOUBLE KILL … LEGENDARY 连击横幅与专属音效
 - **错词本**：答错的单词自动收录（localStorage 持久化），可针对错词重新练习
-- **幸运红包**：每轮通关后三选一抽金币（1~100 金币加权概率）；多选单元时金币按单元数加成（单包封顶 100），整年级全部单元则发放 3 个必含金币的红包（其中 1 个至少 10 金币），服务端校验到账
+- **幸运红包**：每轮通关后抽金币（1~100 金币加权概率）；2~3 个单元时金币 ×2，4 个以上单元时 3 个红包中有 2 个含金币并按阶梯倍率加成（4~6 个 ×1.5、7~9 个 ×2、10 个以上 ×2.4，单包封顶 100），整年级全部单元则发放 3 个必含金币的红包（其中 1 个至少 10 金币），服务端校验到账
 - **金币商店**
   - 道具：如「查看单词」（冲锋枪扫过四线格逐个打出字母的特效），扣背包库存使用
   - 实物礼物：原子扣库存，购买后生成 `EWD-XXXXXXXX` 兑换券码
+  - 商品管理后台：`/admin` 可视化新增 / 编辑 / 上下架商品，商品目录存于 SQLite，学员端实时生效
+  - 用户管理后台：`/admin` 内按用户名 / ID 搜索用户，查看金币与通关轮数，增加 / 扣减金币并留备注，扣减不允许透支，所有调整写入金币流水可对账
 - **账号体系**：注册 / 登录 / 登出，scrypt 密码哈希 + 随机 token 会话（30 天有效），金币与通关轮数服务端权威存储，按用户隔离
 - **词库自动探测**：按「学段 / 年级（考试）/ 上下册 / 单元」组织 JSON 文件，启动时自动探测可用单元，也支持手动导入本地 JSON
 
@@ -43,7 +45,7 @@ ewd/
 │   ├── db.js               # SQLite 表结构与商品目录种子
 │   └── data/ewd.db         # 运行后自动生成（已 gitignore）
 ├── src/
-│   ├── components/         # 页面与组件（Home / Quiz / Result / 商店 / 闯关弹层等）
+│   ├── components/         # 页面与组件（Home / Quiz / Result / 商店 / 闯关弹层 / AdminPage 等）
 │   ├── hooks/              # 自定义 hooks（倒计时等）
 │   ├── lib/                # api 客户端、词库加载、判题、奖励、音效、朗读、类型
 │   ├── store/              # Zustand 全局状态
@@ -100,6 +102,23 @@ PORT=8080 npm start
 
 > 首次启动服务时会自动创建 `server/data/ewd.db` 并幂等播种内置商品目录，无需手动初始化数据库。
 
+### 管理后台
+
+启动服务后访问 `/admin`（开发环境为 http://localhost:5173/admin，生产环境为 http://localhost:3001/admin），输入管理密码即可：
+
+- 新增商品：名称、类型（道具 / 实物礼物）、描述、价格、库存、排序、是否上架
+- 编辑商品：价格、库存、描述等即时生效；SKU 创建后不可修改
+- 上下架：下架后学员端商店不再展示，已购买库存 / 兑换券不受影响
+- 用户管理：搜索用户，查看金币 / 通关轮数，按 +N / -N 调整金币并填写备注；扣减不能使余额为负，调整记录写入金币流水，可展开查看最近 20 条
+
+管理密码优先读取环境变量 `ADMIN_PASSWORD`；未配置时服务端会自动生成，并保存到 `server/data/admin-password.txt`（已 gitignore），同时打印在启动日志中：
+
+```bash
+ADMIN_PASSWORD=your-strong-password npm run server
+```
+
+管理登录与学员账号完全隔离，管理会话 12 小时有效，服务重启后需重新登录。
+
 ## npm scripts
 
 | 命令 | 说明 |
@@ -143,5 +162,6 @@ PORT=8080 npm start
 - `GET /api/rewards` · `POST /api/rewards/grant`（红包金币，单包或最多 3 包批量，每包 1~100 整数硬校验）· `POST /api/runs`（通关轮数 +1）
 - `GET /api/shop/catalog` · `POST /api/shop/purchase`（事务保证扣款 / 扣库存原子性）· `GET /api/shop/vouchers`
 - `POST /api/items/consume`（消耗道具，记录使用场景）
+- 管理后台（使用 `x-admin-token`，与学员 Bearer 会话隔离）：`POST /api/admin/login` · `GET /api/admin/shop/items` · `POST /api/admin/shop/items` · `PATCH /api/admin/shop/items/:id` · `GET /api/admin/users` · `POST /api/admin/users/:id/coins`（增加 / 扣减金币，事务内校验不透支并写流水）· `GET /api/admin/users/:id/transactions`
 
 数据库表：`users`、`sessions`、`shop_items`、`inventory`、`item_usages`、`vouchers`、`coin_transactions`（金币收支流水，含余额快照可对账），建表语句见 [server/db.js](server/db.js)。

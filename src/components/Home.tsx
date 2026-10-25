@@ -222,8 +222,8 @@ export function Home() {
         </div>
       )}
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col gap-2.5">
+      <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <label className="flex cursor-pointer select-none items-center gap-2.5 text-[14.5px] text-muted-foreground">
             <Switch
               checked={settings.shuffle}
@@ -258,7 +258,7 @@ export function Home() {
             闯关模式（一个单元为一关；普通挑战每关 3 颗心，整年级整轮共 10 颗心）
           </label>
         </div>
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5 md:w-[220px] md:flex-none">
           <Button variant="outline" onClick={() => setShopOpen(true)}>
             <Store className="h-[18px] w-[18px] text-[#e08a1e]" />
             金币商店
@@ -307,6 +307,16 @@ export function Home() {
           <code className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[13px]">{`[{"name":"sport","trans":["体育运动"]}]`}</code>
         </li>
         <li>直接双击打开页面时浏览器可能禁止读取本地文件，请改用「导入 JSON」。</li>
+        <li>
+          管理员可进入
+          <a
+            href="/admin"
+            className="ml-1 font-bold text-primary underline-offset-2 hover:underline"
+          >
+            商品管理后台
+          </a>
+          添加、编辑或下架金币商店商品。
+        </li>
       </ul>
     </div>
   );

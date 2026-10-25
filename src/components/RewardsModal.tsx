@@ -75,7 +75,10 @@ export function RewardsModal({ open, onOpenChange }: RewardsModalProps) {
               ，另外 2 个是鼓励成语，金币数额越大越稀有。
             </p>
             <p>
-              多单元闯关：红包金币按所选单元数量提升，
+              多单元闯关：选得越多金币越多。
+              <b className="text-[#9a6414]">2~3 个单元</b> 仍是 1 个金币红包，数额 ×2；
+              <b className="text-[#9a6414]">4 个单元以上</b>3 个红包中有 2 个藏着金币，单包按阶梯倍率加成
+              （4~6 个 ×1.5、7~9 个 ×2、10 个以上 ×2.4），点任意红包全部拆开，
               <b className="text-[#9a6414]">单个红包最高 100 金币</b>。
             </p>
             <p>

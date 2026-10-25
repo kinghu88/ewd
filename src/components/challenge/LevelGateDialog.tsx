@@ -6,6 +6,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { getUnitRewardTier, SECOND_COIN_PACKET_THRESHOLD } from '@/lib/rewards';
 import { useQuizStore } from '@/store/useQuizStore';
 import { RedPacketDialog } from './RedPacketDialog';
 
@@ -129,10 +130,18 @@ export function LevelGateDialog() {
                       <br />
                       其中 1 个至少 10 金币，单个红包最高 100 金币
                     </>
+                  ) : challengeReward.unitCount > SECOND_COIN_PACKET_THRESHOLD ? (
+                    <>
+                      已选 <b className="text-[#e08a1e]">{challengeReward.unitCount} 个单元</b>，
+                      3 个红包中有 <b className="text-[#e08a1e]">2 个藏着金币</b>
+                      <br />
+                      单包 ×{getUnitRewardTier(challengeReward.unitCount).multiplier}
+                      （最高 100 金币），点任意红包全部拆开
+                    </>
                   ) : challengeReward.unitCount > 1 ? (
                     <>
                       已选 <b className="text-[#e08a1e]">{challengeReward.unitCount} 个单元</b>，
-                      红包金币按 {challengeReward.unitCount} 倍加成
+                      金币红包 ×{getUnitRewardTier(challengeReward.unitCount).multiplier} 加成
                       <br />
                       3 个红包中藏着 1 份金币，单个红包最高 100 金币
                     </>

@@ -2,11 +2,13 @@
 /* 通关幸运红包（金币余额与通关轮数由服务端按用户存储）                    */
 /*                                                                      */
 /* 规则：                                                                */
-/*   · 单单元 / 多单元：3 个红包中有且仅有 1 个藏有金币（位置随机，        */
-/*     能否选中看运气），另外 2 个是鼓励成语；金币红包内的数额按权重抽取，  */
-/*     多选单元时按单元数线性加成（单个红包封顶 100 金币）。               */
-/*   · 整年级全部单元：3 个红包全部藏有金币，其中 1 个保底至少 10 金币，   */
-/*     另外 2 个随机，单个红包封顶 100 金币。                              */
+/*   · 1 个单元：3 个红包中有且仅有 1 个藏有金币（位置随机），另外 2 个是   */
+/*     鼓励成语，金币按权重抽取。                                          */
+/*   · 2~3 个单元：仍是 1 个金币红包，金币数额按 ×2 加成。                  */
+/*   · 4 个单元以上：3 个红包中有 2 个藏有金币，单包按阶梯倍率加成，        */
+/*     点任意红包即全部拆开、金币一次性到账。                              */
+/*   · 整年级全部单元：3 个红包全部藏有金币，其中 1 个保底至少 10 金币。    */
+/*   · 所有单个红包封顶 100 金币（与服务端硬校验一致）。                    */
 /* ------------------------------------------------------------------ */
 
 export interface CoinTier {
@@ -93,12 +95,42 @@ export function drawCoinAmount(minCoins = 1): number {
 }
 
 /**
- * 多单元奖励加成：基础金币 × 单元数，单个红包封顶 100。
- * 例如选 3 个单元时抽到 7 金币，实得 21 金币；抽到 50 金币则封顶 100。
+ * 多单元奖励阶梯：单元数越多，金币红包个数与单包倍率同步提升。
+ * 4 个单元起金币红包变为 2 个（3 选 2 有金币），合计收益随单元数递增，
+ * 且始终低于整年级专属奖励（3 个金币红包 + 1 个保底 10）。
  */
-export function scaleCoinForUnits(baseCoins: number, unitCount: number): number {
+export interface UnitRewardTier {
+  /** 该档位覆盖的最大单元数（含） */
+  maxUnits: number;
+  /** 本轮金币红包个数（含金币的红包数量） */
+  coinPackets: number;
+  /** 单个金币红包的金币倍率 */
+  multiplier: number;
+}
+
+export const UNIT_REWARD_TIERS: UnitRewardTier[] = [
+  { maxUnits: 1, coinPackets: 1, multiplier: 1 },
+  { maxUnits: 3, coinPackets: 1, multiplier: 2 },
+  { maxUnits: 6, coinPackets: 2, multiplier: 1.5 },
+  { maxUnits: 9, coinPackets: 2, multiplier: 2 },
+  { maxUnits: Number.POSITIVE_INFINITY, coinPackets: 2, multiplier: 2.4 },
+];
+
+/** 超过该单元数后，3 个红包中有 2 个含金币 */
+export const SECOND_COIN_PACKET_THRESHOLD = 3;
+
+/** 按已选单元数取奖励档位（少于 1 个按 1 个处理） */
+export function getUnitRewardTier(unitCount: number): UnitRewardTier {
   const units = Math.max(1, Math.floor(unitCount) || 1);
-  return Math.min(PACKET_MAX_COINS, Math.round(baseCoins * units));
+  return UNIT_REWARD_TIERS.find((tier) => units <= tier.maxUnits) ?? UNIT_REWARD_TIERS[UNIT_REWARD_TIERS.length - 1]!;
+}
+
+/**
+ * 多单元奖励加成：基础金币 × 阶梯倍率，单个红包封顶 100。
+ * 例如 7 个单元（×2）抽到 7 金币，实得 14 金币。
+ */
+export function scaleCoinByMultiplier(baseCoins: number, multiplier: number): number {
+  return Math.min(PACKET_MAX_COINS, Math.round(baseCoins * multiplier));
 }
 
 /** 从成语池中不放回地随机取 count 个（互不重复） */
@@ -115,9 +147,10 @@ export function drawIdioms(count: number): string[] {
 /**
  * 生成一轮红包布局：
  * - 整年级全部单元：count 个红包全部为金币，其中随机 1 个保底至少 10 金币；
- * - 其余情况：count 个红包中有且仅有 1 个金币红包（位置随机），金币按所选单元数加成，
+ * - 4 个单元以上：count 个红包中有 2 个金币红包（各按阶梯倍率加成），其余为鼓励成语；
+ * - 1~3 个单元：count 个红包中有且仅有 1 个金币红包（数额按档位加成），
  *   另外 count-1 个为互不重复的鼓励成语。
- * 布局在弹窗打开时就确定，用户能否选中金币完全取决于点击的位置（运气）。
+ * 金币位置随机，多金币红包时点开任意一个即可全部领取。
  */
 export function drawPacketLayout(
   reward: ChallengeRewardConfig = DEFAULT_CHALLENGE_REWARD,
@@ -134,14 +167,22 @@ export function drawPacketLayout(
     }));
   }
 
-  const coinIndex = Math.floor(Math.random() * count);
-  const idioms = drawIdioms(count - 1);
-  const coins = scaleCoinForUnits(drawCoinAmount(), reward.unitCount);
+  const tier = getUnitRewardTier(reward.unitCount);
+  const coinCount = Math.min(tier.coinPackets, count);
+  const coinIndices = new Set(
+    Array.from({ length: count }, (_, i) => i)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, coinCount),
+  );
+  const idioms = drawIdioms(count - coinCount);
   const slots: PacketSlot[] = [];
   let idiomCursor = 0;
   for (let i = 0; i < count; i += 1) {
-    if (i === coinIndex) {
-      slots.push({ kind: 'coin', coins });
+    if (coinIndices.has(i)) {
+      slots.push({
+        kind: 'coin',
+        coins: scaleCoinByMultiplier(drawCoinAmount(), tier.multiplier),
+      });
     } else {
       slots.push({ kind: 'cheer', idiom: idioms[idiomCursor]! });
       idiomCursor += 1;

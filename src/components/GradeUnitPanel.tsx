@@ -3,6 +3,7 @@ import { ArrowLeft, Eye, FileQuestion, Layers, Play, Shuffle, Swords } from 'luc
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { FULL_GRADE_LIVES, useQuizStore } from '@/store/useQuizStore';
+import { SECOND_COIN_PACKET_THRESHOLD } from '@/lib/rewards';
 import { cn } from '@/lib/utils';
 import {
   fetchLevelWords,
@@ -396,9 +397,14 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
                   <b>整年级专属奖励：</b>3 个红包全部含金币，其中 1 个至少 10 金币（单包最高 100）
                   · 整轮共 <b>{FULL_GRADE_LIVES} 颗心</b>，小关卡失败不可重试
                 </>
+              ) : totalSelected > SECOND_COIN_PACKET_THRESHOLD ? (
+                <>
+                  <b>多单元奖励：</b>3 个红包中有 2 个含金币，单包按阶梯倍率加成（最高 100 金币），
+                  点任意红包全部拆开
+                </>
               ) : totalSelected > 1 ? (
                 <>
-                  <b>多单元加成：</b>红包金币按已选 {totalSelected} 个单元提升（单包最高 100 金币）
+                  <b>多单元加成：</b>已选 {totalSelected} 个单元，金币红包 ×2 提升（单包最高 100 金币）
                 </>
               ) : (
                 <>通关后可拆 3 个红包，其中 1 个藏着金币</>

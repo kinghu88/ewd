@@ -170,6 +170,103 @@ export const shopApi = {
   },
 };
 
+/** 管理后台商品（包含已下架项与创建时间） */
+export interface AdminShopItem {
+  id: string;
+  kind: ShopItemKind;
+  name: string;
+  description: string;
+  price_coins: number;
+  stock: number | null;
+  active: number;
+  sort: number;
+  created_at: number;
+}
+
+/** 后台新增 / 编辑商品入参；编辑时只传需要变更的字段 */
+export interface AdminShopItemInput {
+  id?: string;
+  kind?: ShopItemKind;
+  name?: string;
+  description?: string;
+  price_coins?: number;
+  stock?: number | null;
+  active?: boolean;
+  sort?: number;
+}
+
+/** 后台用户列表项 */
+export interface AdminUser {
+  id: number;
+  username: string;
+  coins: number;
+  runs: number;
+  created_at: number;
+}
+
+/** 金币流水来源 */
+export type CoinTxnSource = 'redpacket' | 'shop_purchase' | 'admin_adjust';
+
+/** 金币收支流水（后台对账用） */
+export interface AdminCoinTxn {
+  id: number;
+  change: number;
+  balance_after: number;
+  source: CoinTxnSource;
+  ref: string;
+  created_at: number;
+}
+
+export const adminApi = {
+  login(password: string) {
+    return request<{ token: string; expiresIn: number }>('/api/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    });
+  },
+  items(token: string) {
+    return request<{ items: AdminShopItem[] }>('/api/admin/shop/items', {
+      headers: { 'x-admin-token': token },
+    });
+  },
+  create(token: string, input: AdminShopItemInput) {
+    return request<{ item: AdminShopItem }>('/api/admin/shop/items', {
+      method: 'POST',
+      headers: { 'x-admin-token': token },
+      body: JSON.stringify(input),
+    });
+  },
+  update(token: string, id: string, input: AdminShopItemInput) {
+    return request<{ item: AdminShopItem }>(`/api/admin/shop/items/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'x-admin-token': token },
+      body: JSON.stringify(input),
+    });
+  },
+  /** 用户列表（按用户名 / ID 搜索） */
+  users(token: string, query = '') {
+    const qs = query.trim() ? `?q=${encodeURIComponent(query.trim())}` : '';
+    return request<{ users: AdminUser[]; total: number }>(`/api/admin/users${qs}`, {
+      headers: { 'x-admin-token': token },
+    });
+  },
+  /** 调整用户金币：正数增加、负数扣减 */
+  adjustCoins(token: string, userId: number, change: number, note = '') {
+    return request<{ user: AdminUser }>(`/api/admin/users/${userId}/coins`, {
+      method: 'POST',
+      headers: { 'x-admin-token': token },
+      body: JSON.stringify({ change, note }),
+    });
+  },
+  /** 用户最近金币流水 */
+  userTransactions(token: string, userId: number) {
+    return request<{ user: AdminUser; transactions: AdminCoinTxn[] }>(
+      `/api/admin/users/${userId}/transactions`,
+      { headers: { 'x-admin-token': token } },
+    );
+  },
+};
+
 export const rewardsApi = {
   get() {
     return request<ServerRewards>('/api/rewards');
