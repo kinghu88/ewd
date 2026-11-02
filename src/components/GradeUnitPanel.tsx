@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Eye, FileQuestion, Layers, Play, Shuffle, Swords } from 'lucide-react';
+import { ArrowLeft, Dice5, Eye, FileQuestion, Layers, Play, Shuffle, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { FULL_GRADE_LIVES, useQuizStore } from '@/store/useQuizStore';
@@ -19,6 +19,7 @@ import {
 } from '@/lib/data';
 import type { QuizLevel } from '@/store/useQuizStore';
 import type { WordItem } from '@/lib/types';
+import { shuffleWords } from '@/lib/words';
 import { WordPreviewDialog } from './WordPreviewDialog';
 
 interface GradeUnitPanelProps {
@@ -75,18 +76,30 @@ function ShuffleToggle() {
 }
 
 /** 面板内的闯关模式开关，与首页共用同一份 settings */
-function ChallengeToggle() {
+function ChallengeToggle(props: { disabled?: boolean; hint?: string } = {}) {
   const challenge = useQuizStore((s) => s.settings.challenge);
   const setSetting = useQuizStore((s) => s.setSetting);
+  const { disabled, hint } = props;
   return (
-    <label className="flex cursor-pointer select-none items-center justify-center gap-2.5 text-[14.5px] text-muted-foreground">
+    <label
+      className={cn(
+        'flex cursor-pointer select-none items-center justify-center gap-2.5 text-[14.5px]',
+        disabled ? 'cursor-not-allowed text-muted-foreground/60' : 'text-muted-foreground',
+      )}
+    >
       <Switch
         checked={challenge}
+        disabled={disabled}
         onCheckedChange={(v) => setSetting({ challenge: v })}
         aria-label="闯关模式"
       />
-      <Swords className="h-4 w-4 text-[#e08a1e]" />
+      <Swords className={cn('h-4 w-4', disabled ? 'text-[#e08a1e]/60' : 'text-[#e08a1e]')} />
       闯关模式（一个单元为一关；普通挑战每关 3 颗心，整年级整轮共 10 颗心）
+      {hint && (
+        <span className="ml-1 rounded-md bg-muted px-2 py-0.5 text-[12px] text-muted-foreground">
+          {hint}
+        </span>
+      )}
     </label>
   );
 }
@@ -95,12 +108,17 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
   const startQuiz = useQuizStore((s) => s.startQuiz);
   const shuffle = useQuizStore((s) => s.settings.shuffle);
   const challenge = useQuizStore((s) => s.settings.challenge);
+  const setSetting = useQuizStore((s) => s.setSetting);
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [stage, setStage] = useState<StageUnits | null>(null);
   const [selection, setSelection] = useState<Selection>(EMPTY_SELECTION);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** 随机抽词模式：null = 手动选单元；数字 = 从全年级所有单元里随机抽 N 个单词 */
+  const [randomPickCount, setRandomPickCount] = useState<number | null>(null);
+  const [randomInput, setRandomInput] = useState('');
 
   /** 单词预览弹窗 */
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -155,6 +173,21 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
     [selection, stage],
   );
 
+  /** 全年级所有单元的单词总数（探测阶段已拿到 count，不用额外请求） */
+  const totalGradeWords = useMemo(
+    () =>
+      stage
+        ? stage.groups.reduce(
+            (sum, group) => sum + group.units.reduce((n, u) => n + u.count, 0),
+            0,
+          )
+        : 0,
+    [stage],
+  );
+
+  /** 当前是否处于「随机抽词模式」 */
+  const isRandomMode = randomPickCount !== null;
+
   const isAllPicked = totalAvailable > 0 && totalSelected === totalAvailable;
 
   const toggleUnit = (group: GroupKey, unit: number) => {
@@ -194,15 +227,80 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
     [selection, stage],
   );
 
-  /** 加载已勾选单元的全部单词（探测时已缓存，不会重复请求） */
+  /** 加载已勾选单元的全部单词（探测时已缓存，不会重复请求）；随机模式下从全年级抽取 */
   const loadSelectedWords = async (): Promise<{ words: WordItem[]; title: string }> => {
     if (phase === 'legacy') {
       const words = await fetchLevelWords(level.base);
       return { words, title: `${level.label}词库` };
     }
     if (!stage) throw new Error('stage not ready');
+
+    if (isRandomMode) {
+      // 随机模式：加载全年级所有单元 → 洗牌 → 截取 N 个
+      const allRefs: UnitRef[] = stage.groups.flatMap((g) =>
+        g.units.map((u) => ({ group: g.key, unit: u.unit })),
+      );
+      const allWords = await fetchUnitWords(level.base, allRefs);
+      const picked = shuffleWords(allWords).slice(0, randomPickCount!);
+      return {
+        words: picked,
+        title: `${level.label} · 全年级随机抽 ${picked.length} 词`,
+      };
+    }
+
     const words = await fetchUnitWords(level.base, selectedRefs);
     return { words, title: buildSourceLabel(level, selection, stage, isAllPicked) };
+  };
+
+  /** 随机模式下也支持闯关：把抽到的词均匀切成若干关 */
+  /** 随机模式闯关门槛：抽取数量必须 ≥ 30（否则关卡太少，闯关没有意义） */
+  const RANDOM_CHALLENGE_MIN = 30;
+
+  /** 随机模式 + 闯关时，心数按抽取单词数量动态分段：
+   *   ≤ 50 → 3 颗心
+   *   51~80 → 5 颗心
+   *   81~100 → 8 颗心
+   *   ≥ 101 → 10 颗心
+   */
+  function livesForRandomChallenge(wordCount: number): number {
+    if (wordCount <= 50) return 3;
+    if (wordCount <= 80) return 5;
+    if (wordCount <= 100) return 8;
+    return 10;
+  }
+
+  const randomChallengeDisabled =
+    isRandomMode && (randomPickCount ?? 0) < RANDOM_CHALLENGE_MIN;
+
+  // 当 randomPickCount 降到门槛以下时，自动关掉闯关模式（用户从 40 改到 20）
+  useEffect(() => {
+    if (isRandomMode && (randomPickCount ?? 0) < RANDOM_CHALLENGE_MIN) {
+      if (challenge) setSetting({ challenge: false });
+    }
+  }, [isRandomMode, randomPickCount, challenge, setSetting]);
+
+  /** effectiveChallenge 同时受全局设置和随机模式门槛约束 */
+  const effectiveChallenge = challenge && !randomChallengeDisabled;
+
+  /** 关卡划分策略：目标每关约 5 词，至少 2 关（否则闯关没有意义） */
+  const WORDS_PER_LEVEL = 5;
+  const buildRandomLevels = (picked: WordItem[]): QuizLevel[] => {
+    const wordCount = picked.length;
+    const levelCount = Math.max(2, Math.ceil(wordCount / WORDS_PER_LEVEL));
+    // 尽量均匀：前 N-1 关 ceil 平均分配，最后一关兜底
+    const base = Math.floor(wordCount / levelCount);
+    const extra = wordCount % levelCount;
+    const levels: QuizLevel[] = [];
+    let offset = 0;
+    for (let i = 0; i < levelCount; i++) {
+      const size = base + (i < extra ? 1 : 0);
+      levels.push({
+        title: `随机第 ${i + 1} 关 · ${size} 词`,
+        words: picked.slice(offset, offset + size),
+      });
+      offset += size;
+    }
+    return levels;
   };
 
   /** 默写开始前预览全部单词 */
@@ -229,14 +327,47 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
   };
 
   const handleStart = async () => {
-    if (!stage || totalSelected === 0) return;
+    if (!stage) return;
+    // 普通模式必须选了单元；随机模式必须有合法的抽取数量
+    if (!isRandomMode && totalSelected === 0) return;
+    if (isRandomMode && (!randomPickCount || randomPickCount <= 0)) return;
+    // 防御：随机模式 + 闯关时，抽取数量必须 ≥ 门槛
+    if (isRandomMode && challenge && (randomPickCount ?? 0) < RANDOM_CHALLENGE_MIN) {
+      setError(`随机闯关需要至少 ${RANDOM_CHALLENGE_MIN} 个单词（当前 ${randomPickCount ?? 0}）`);
+      return;
+    }
     setStarting(true);
     setError(null);
     try {
+      if (isRandomMode) {
+        // 随机抽词：加载全年级 → 洗牌 → 截取 N
+        const allRefs: UnitRef[] = stage.groups.flatMap((g) =>
+          g.units.map((u) => ({ group: g.key, unit: u.unit })),
+        );
+        const allWords = await fetchUnitWords(level.base, allRefs);
+        const picked = shuffleWords(allWords).slice(0, randomPickCount!);
+        const title = `${level.label} · 全年级随机抽 ${picked.length} 词`;
+
+        if (effectiveChallenge) {
+          // 随机抽词 + 闯关：把抽到的词均匀切成若干关
+          const levels = buildRandomLevels(picked);
+          // 心数按抽取数量动态分段覆盖（不再一刀切 10 颗心）
+          const lives = livesForRandomChallenge(picked.length);
+          startQuiz(picked, title, 'challenge', levels, {
+            unitCount: levels.length,
+            fullGrade: true,
+            livesOverride: lives,
+          });
+        } else {
+          startQuiz(picked, title);
+        }
+        return;
+      }
+
       // 按单元分组取词：闯关模式一个单元就是一关；普通模式合并成整份词表
       const groups = await fetchUnitWordGroups(level.base, selectedRefs);
       const title = buildSourceLabel(level, selection, stage, isAllPicked);
-      if (challenge) {
+      if (effectiveChallenge) {
         // 分组与 selectedRefs 顺序一致（探测阶段已确认这些文件有效）
         const levels: QuizLevel[] = selectedRefs
           .map((ref, i) => ({ title: unitTitle(ref), words: groups[i] ?? [] }))
@@ -363,36 +494,138 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
 
       {phase === 'ready' && stage && (
         <>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={isAllPicked ? 'default' : 'outline'}
-              className="h-9 rounded-full"
-              onClick={pickAll}
-            >
-              <Layers className="h-4 w-4" />
-              全选全部单元
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-9 rounded-full text-muted-foreground"
-              disabled={totalSelected === 0}
-              onClick={() => setSelection(EMPTY_SELECTION)}
-            >
-              清空选择
-            </Button>
-            <span className="ml-auto text-[13px] text-muted-foreground">
-              单元可多选，已选 <span className="font-bold text-primary">{totalSelected}</span> 个 ·
-              共 <span className="font-bold text-primary">{totalWords}</span> 个单词
-            </span>
+          {/* ---- 随机抽词模式切换区 ---- */}
+          <div
+            className={cn(
+              'mt-2 rounded-xl border-[1.5px] p-3 transition-colors',
+              isRandomMode
+                ? 'border-[#7a5af0]/30 bg-[#f7f4ff]'
+                : 'border-[#dce7f6] bg-[#f8fbff]',
+            )}
+          >
+            <label className="flex cursor-pointer select-none items-center gap-2.5">
+              <Dice5 className={cn('h-[18px] w-[18px]', isRandomMode ? 'text-[#7a5af0]' : 'text-muted-foreground')} />
+              <span className="text-[14.5px] font-bold text-foreground">
+                全年级随机抽词模式
+              </span>
+              <span className="text-[12.5px] text-muted-foreground">
+                （从{level.label}所有单元里随机挑 N 个来听写）
+              </span>
+              <span className="ml-auto">
+                <Switch
+                  checked={isRandomMode}
+                  onCheckedChange={(v) => {
+                    if (v) {
+                      // 开启时默认抽 20 词
+                      const defaultCount = Math.min(20, totalGradeWords || 20);
+                      setRandomPickCount(defaultCount);
+                      setRandomInput(String(defaultCount));
+                    } else {
+                      setRandomPickCount(null);
+                      setRandomInput('');
+                    }
+                  }}
+                />
+              </span>
+            </label>
+
+            {isRandomMode && (
+              <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                <span className="text-[13px] text-muted-foreground">抽取</span>
+                {[10, 20, 30, 40, 50].map((n) => {
+                  const active = randomPickCount === n;
+                  const disabled = n > totalGradeWords;
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => {
+                        setRandomPickCount(n);
+                        setRandomInput(String(n));
+                      }}
+                      className={cn(
+                        'h-8 rounded-full border px-3 text-[13px] font-bold transition-all',
+                        active
+                          ? 'border-[#7a5af0] bg-[#7a5af0] text-white shadow-[0_3px_10px_rgba(122,90,240,.3)]'
+                          : disabled
+                            ? 'cursor-not-allowed border-[#dce7f6] bg-[#f0f4fa] text-muted-foreground/60'
+                            : 'border-[#dce7f6] bg-white text-primary hover:border-[#7a5af0] hover:text-[#7a5af0]',
+                      )}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
+                <span className="text-[13px] text-muted-foreground">或</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={totalGradeWords || undefined}
+                  value={randomInput}
+                  onChange={(e) => {
+                    setRandomInput(e.target.value);
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v > 0) {
+                      setRandomPickCount(Math.min(v, totalGradeWords || v));
+                    }
+                  }}
+                  className="h-8 w-20 rounded-full border-[1.5px] border-[#dce7f6] bg-white px-3 text-center text-[13px] font-bold text-primary outline-none transition-all focus:border-[#7a5af0]"
+                  placeholder="自定义"
+                />
+                <span className="text-[13px] text-muted-foreground">个单词</span>
+                <span className="ml-auto text-[12.5px] text-muted-foreground">
+                  全年级共 <span className="font-bold text-[#7a5af0]">{totalGradeWords}</span> 词
+                  {isRandomMode && randomPickCount
+                    ? ` · 本次抽 ${Math.min(randomPickCount, totalGradeWords)} 词`
+                    : ''}
+                </span>
+              </div>
+            )}
           </div>
 
-          {challenge && totalSelected > 0 && (
+          {!isRandomMode && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={isAllPicked ? 'default' : 'outline'}
+                className="h-9 rounded-full"
+                onClick={pickAll}
+              >
+                <Layers className="h-4 w-4" />
+                全选全部单元
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-9 rounded-full text-muted-foreground"
+                disabled={totalSelected === 0}
+                onClick={() => setSelection(EMPTY_SELECTION)}
+              >
+                清空选择
+              </Button>
+              <span className="ml-auto text-[13px] text-muted-foreground">
+                单元可多选，已选 <span className="font-bold text-primary">{totalSelected}</span> 个 ·
+                共 <span className="font-bold text-primary">{totalWords}</span> 个单词
+              </span>
+            </div>
+          )}
+
+          {challenge && (isRandomMode ? randomPickCount! > 0 : totalSelected > 0) && (
             <p className="mt-3 rounded-xl border border-[#f0c98a] bg-[#fff6e6] px-3.5 py-2 text-[13px] leading-6 text-[#a86a1e]">
-              {isAllPicked ? (
+              {isRandomMode ? (() => {
+                // 随机 + 闯关：心数按抽取数量动态分段
+                const pickWordCount = Math.min(randomPickCount!, totalGradeWords);
+                const lives = livesForRandomChallenge(pickWordCount);
+                return (
+                  <>
+                    <b>整年级随机闯关：</b>3 个红包全部含金币，其中 1 个至少 10 金币（单包最高 100）
+                    · 整轮共 <b>{lives} 颗心</b>，小关卡失败不可重试
+                  </>
+                );
+              })() : isAllPicked ? (
                 <>
                   <b>整年级专属奖励：</b>3 个红包全部含金币，其中 1 个至少 10 金币（单包最高 100）
                   · 整轮共 <b>{FULL_GRADE_LIVES} 颗心</b>，小关卡失败不可重试
@@ -412,7 +645,7 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
             </p>
           )}
 
-          <div className="mt-4 space-y-5">
+          <div className={cn('mt-4 space-y-5', isRandomMode && 'pointer-events-none opacity-40')}>
             {stage.groups.map((group) => {
               const list = group.units;
               if (list.length === 0) return null;
@@ -479,14 +712,26 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
 
           <div className="mt-5 flex flex-col items-center gap-3">
             <ShuffleToggle />
-            <ChallengeToggle />
+            <ChallengeToggle
+              disabled={randomChallengeDisabled}
+              hint={
+                randomChallengeDisabled
+                  ? `随机闯关需 ≥ ${RANDOM_CHALLENGE_MIN} 词（当前 ${Math.min(randomPickCount ?? 0, totalGradeWords)}）`
+                  : undefined
+              }
+            />
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <Button
               size="lg"
               variant="secondary"
-              disabled={totalSelected === 0 || previewLoading || starting}
+              disabled={
+                previewLoading || starting ||
+                (isRandomMode
+                  ? !randomPickCount || randomPickCount <= 0
+                  : totalSelected === 0)
+              }
               onClick={handlePreview}
             >
               <Eye className="h-[18px] w-[18px]" />
@@ -494,17 +739,29 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
             </Button>
             <Button
               size="lg"
-              disabled={totalSelected === 0 || starting}
+              disabled={
+                starting ||
+                (isRandomMode
+                  ? !randomPickCount || randomPickCount <= 0
+                  : totalSelected === 0)
+              }
               onClick={handleStart}
             >
               <Play className="h-[18px] w-[18px]" />
-              {starting
-                ? '加载中…'
-                : totalSelected === 0
-                  ? '请先选择单元'
-                  : challenge
-                    ? `开始闯关（${totalSelected} 关 · ${totalWords} 个单词）`
-                    : `开始默写（${totalWords} 个单词）`}
+              {(() => {
+                if (starting) return '加载中…';
+                if (isRandomMode) {
+                  const pickWordCount = Math.min(randomPickCount || 0, totalGradeWords);
+                  if (challenge) {
+                    const levelCount = Math.max(2, Math.ceil(pickWordCount / WORDS_PER_LEVEL));
+                    return `开始闯关（${levelCount} 关 · 随机 ${pickWordCount} 词）`;
+                  }
+                  return `开始默写（随机抽 ${pickWordCount} 词）`;
+                }
+                if (totalSelected === 0) return '请先选择单元';
+                if (challenge) return `开始闯关（${totalSelected} 关 · ${totalWords} 个单词）`;
+                return `开始默写（${totalWords} 个单词）`;
+              })()}
             </Button>
           </div>
         </>

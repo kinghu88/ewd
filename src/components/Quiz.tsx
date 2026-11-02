@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, BookText, Crosshair, Flame, Heart, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookText, Crosshair, Flame, Heart, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -41,6 +41,7 @@ export function Quiz() {
   const clearLetters = useQuizStore((s) => s.clearLetters);
   const judge = useQuizStore((s) => s.judge);
   const judgeTimeout = useQuizStore((s) => s.judgeTimeout);
+  const skip = useQuizStore((s) => s.skip);
   const advance = useQuizStore((s) => s.advance);
   const goHome = useQuizStore((s) => s.goHome);
   const showToast = useQuizStore((s) => s.showToast);
@@ -159,6 +160,22 @@ export function Quiz() {
       setFlash(null);
     }, 1300);
   }, [judgeTimeout, advance, showToast]);
+
+  /** 用户主动跳过：记为错题，显示正确答案后进入下一词 */
+  const handleSkip = useCallback(() => {
+    const s = useQuizStore.getState();
+    if (s.locked || peekingWord) return;
+    const current = s.words[s.index];
+    if (s.settings.sound) playWrong();
+    skip();
+    setFlash('bad');
+    showToast(`跳过！正确答案是「${current?.name ?? ''}」`);
+    clearTimeout(advanceTimer.current);
+    advanceTimer.current = setTimeout(() => {
+      advance();
+      setFlash(null);
+    }, 1100);
+  }, [skip, advance, showToast, peekingWord]);
 
   // 全局键盘兜底：Enter 提交、Backspace 删除（最后一格失焦后依然有效）
   useEffect(() => {
@@ -397,7 +414,16 @@ export function Quiz() {
         <div className="mt-3 flex justify-center gap-3">
           <Button
             variant="outline"
-            className="min-w-[130px] flex-1 sm:flex-none"
+            className="min-w-[110px] flex-1 border-[#f0c98a] bg-[#fff6e6] text-[#a86a1e] hover:border-[#e08a1e] hover:bg-[#fff3da] hover:text-[#a86a1e] sm:flex-none"
+            disabled={locked || peekingWord !== null}
+            onClick={handleSkip}
+          >
+            <ArrowRight className="h-[16px] w-[16px]" />
+            跳过
+          </Button>
+          <Button
+            variant="outline"
+            className="min-w-[110px] flex-1 sm:flex-none"
             disabled={locked || peekingWord !== null}
             onClick={() => {
               clearLetters();
@@ -407,7 +433,7 @@ export function Quiz() {
             清空重填
           </Button>
           <Button
-            className="min-w-[130px] flex-1 sm:flex-none"
+            className="min-w-[110px] flex-1 sm:flex-none"
             disabled={locked || peekingWord !== null}
             onClick={confirmWord}
           >
@@ -415,7 +441,7 @@ export function Quiz() {
           </Button>
         </div>
         <p className="mt-3 text-center text-[13px] text-muted-foreground">
-          输入字母后自动跳到下一格；按退格键可删除字母；确认前可点击任意格子修改，确认后无法更改
+          不会写就点「跳过」（记错题、闯关扣 1 心、自动展示正确答案）；按 Enter 确认、Backspace 删除
         </p>
       </div>
 

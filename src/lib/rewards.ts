@@ -44,8 +44,10 @@ export const FULL_GRADE_MIN_GUARANTEED_COINS = 10;
 export interface ChallengeRewardConfig {
   /** 本次选择的单元数量（>=1） */
   unitCount: number;
-  /** 是否选择了整个年级的全部单元 */
+  /** 是否选择了整个年级的全部单元（触发整年级红包规则 + 10 颗心共享） */
   fullGrade: boolean;
+  /** 额外覆盖初始心数（不填则按 fullGrade 规则：整年级 10、其余 3） */
+  livesOverride?: number;
 }
 
 /** 默认按单单元奖励处理 */

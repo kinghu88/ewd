@@ -1,0 +1,34 @@
+# ---------- Node / Vite ----------
+node_modules
+dist
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---------- 后端数据（运行时生成，镜像里不需要） ----------
+server/data
+server/*.db
+server/*.db-journal
+server/*.db-wal
+server/*.db-shm
+
+# ---------- 源码辅助 ----------
+.vscode
+.idea
+*.tsbuildinfo
+
+# ---------- git ----------
+.git
+.gitignore
+
+# ---------- 系统 ----------
+.DS_Store
+Thumbs.db
+
+# ---------- 无关产物 ----------
+Dockerfile
+.dockerignore
+README.md
+*.md

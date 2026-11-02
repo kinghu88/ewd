@@ -123,6 +123,8 @@ interface QuizState {
   judge: () => QuizRecord;
   /** 限时模式超时：无论已填内容如何，强制记为未答（错题）并锁定 */
   judgeTimeout: () => void;
+  /** 用户主动跳过：当前词记为错题并锁定（闯关扣 1 心、加错词本） */
+  skip: () => void;
   /** 进入下一词，或结束本轮进入结果页 */
   next: () => void;
   /**
@@ -293,9 +295,12 @@ export const useQuizStore = create<QuizState>((set, get) => ({
         ? {
             unitCount: Math.max(1, Math.floor(rewardArg?.unitCount ?? levels.length) || 1),
             fullGrade: rewardArg?.fullGrade ?? false,
+            livesOverride: rewardArg?.livesOverride,
           }
         : DEFAULT_CHALLENGE_REWARD;
-    const initialLives = challengeReward.fullGrade ? FULL_GRADE_LIVES : LEVEL_LIVES;
+    const initialLives =
+      challengeReward.livesOverride ??
+      (challengeReward.fullGrade ? FULL_GRADE_LIVES : LEVEL_LIVES);
 
     set({
       mode: useMode,
@@ -361,6 +366,22 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     const word = s.words[s.index]!;
     const answer = s.cells.map((c) => c.letter).join('');
     const record: QuizRecord = { ...word, answer, correct: false, timeout: true };
+    addWrongWord(word);
+    set({
+      locked: true,
+      records: [...s.records, record],
+      combo: 0,
+      lives: s.mode === 'challenge' ? Math.max(0, s.lives - 1) : s.lives,
+      bookVersion: s.bookVersion + 1,
+    });
+  },
+
+  skip: () => {
+    const s = get();
+    if (s.locked) return;
+    const word = s.words[s.index]!;
+    const answer = s.cells.map((c) => c.letter).join('');
+    const record: QuizRecord = { ...word, answer, correct: false };
     addWrongWord(word);
     set({
       locked: true,
