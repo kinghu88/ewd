@@ -368,6 +368,17 @@ export function Quiz() {
               key={word.name}
               word={word.name}
               soundOn={soundOn}
+              onReveal={(revealedWord) => {
+                // 特效弹完所有字母后，把答案真写进格子
+                const state = useQuizStore.getState();
+                let wi = 0;
+                const newCells = state.cells.map((cell) => {
+                  if (cell.fixed || wi >= revealedWord.length) return cell;
+                  const ch = revealedWord[wi++];
+                  return { ...cell, letter: ch };
+                });
+                useQuizStore.setState({ cells: newCells });
+              }}
               onDone={() => setPeekingWord(null)}
             />
           )}

@@ -160,6 +160,7 @@ body {
   background: transparent;
   border: 0;
   border-radius: 4px;
+  outline: none;
   caret-color: transparent;
   cursor: pointer;
 }
@@ -762,7 +763,7 @@ body {
   height: calc(100% + var(--peek-up) + var(--peek-down));
   overflow: hidden;
   border-radius: 14px;
-  background: #e9ebef; /* 与视频浅灰底一致，cover 裁切边缘也无缝 */
+  background: transparent;
   animation: peek-fade-in 0.2s ease both;
   transition: opacity 0.3s ease;
 }
@@ -788,18 +789,6 @@ body {
   object-fit: cover;
   pointer-events: none;
 }
-/* 右下角「AI生成」水印：浅灰底柔化补丁 */
-.peek-wm-cover {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  width: 118px;
-  height: 40px;
-  background: linear-gradient(135deg, rgba(233, 235, 239, 0) 0%, rgba(233, 235, 239, 0.92) 45%, #e9ebef 100%);
-  pointer-events: none;
-}
-
 /* 克隆四线格：绝对定位回到真实格子的位置（overlay 上移了 --peek-up） */
 .peek-grid-scroll {
   position: absolute;
@@ -909,6 +898,123 @@ body {
     transform: scale(1.4) rotate(24deg);
   }
 }
+
+/* ============================================================
+   CSS-only 狙击镜兜底特效（视频文件缺失 / 浏览器解码失败时启用）
+   ============================================================ */
+
+.peek-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* 镜筒整体：由 JS Web Animations API 动态生成随机搜索轨迹并驱动 */
+.peek-scope-body {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 280px;
+  height: 280px;
+  margin: -140px 0 0 -140px;
+  /* 初始态与 JS 动画第一帧对齐，防闪现 */
+  opacity: 0;
+  transform: translate(0, 0) scale(0.92);
+}
+
+/* 外圈光环：黑色带微透（微抖动由 JS 驱动） */
+.peek-scope-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px solid rgba(35, 44, 63, 0.82);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9) inset,
+    0 0 0 4px rgba(35, 44, 63, 0.35),
+    0 0 36px rgba(0, 0, 0, 0.15);
+}
+
+/* 内圈瞄准细环 */
+.peek-scope-inner {
+  position: absolute;
+  inset: 32px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(35, 44, 63, 0.5);
+}
+
+/* 十字准星：水平线（展开由 JS 驱动） */
+.peek-crosshair-x {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: rgba(35, 44, 63, 0.9);
+  /* 初始隐藏，JS 动画接手防闪现 */
+  transform: scaleX(0);
+  transform-origin: center;
+  opacity: 0;
+}
+
+/* 十字准星：垂直线 */
+.peek-crosshair-y {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: rgba(35, 44, 63, 0.9);
+  transform: scaleY(0);
+  transform-origin: center;
+  opacity: 0;
+}
+
+/* 中央遮光片（开火闪光由 JS 驱动） */
+.peek-scope-iris {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: #232c3f;
+}
+
+/* 开火冲击波（扩散由 JS 驱动） */
+.peek-blast-wave {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.9),
+    0 0 24px rgba(255, 220, 120, 0.6);
+  opacity: 0;
+}
+
+/* 飞散粒子（飞散由 JS 驱动） */
+.peek-blast-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffffff 0%, #ffb02e 100%);
+  opacity: 0;
+}
+.peek-blast-particle--2 {}
+.peek-blast-particle--3 {}
+.peek-blast-particle--4 {}
 
 @media (prefers-reduced-motion: reduce) {
   .peek-overlay,

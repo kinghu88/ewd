@@ -120,6 +120,12 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
   const [randomPickCount, setRandomPickCount] = useState<number | null>(null);
   const [randomInput, setRandomInput] = useState('');
 
+  /**
+   * 随机抽选快照：预览时生成并保存，默写启动时直接复用，确保两个环节单词列表完全一致。
+   * 当用户修改抽选数量、切换模式、关闭预览弹窗等操作时需要清除此快照。
+   */
+  const [randomSnapshot, setRandomSnapshot] = useState<WordItem[] | null>(null);
+
   /** 单词预览弹窗 */
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -237,11 +243,13 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
 
     if (isRandomMode) {
       // 随机模式：加载全年级所有单元 → 洗牌 → 截取 N 个
+      // 抽选结果保存为快照，默写启动时复用，确保预览和默写完全一致
       const allRefs: UnitRef[] = stage.groups.flatMap((g) =>
         g.units.map((u) => ({ group: g.key, unit: u.unit })),
       );
       const allWords = await fetchUnitWords(level.base, allRefs);
       const picked = shuffleWords(allWords).slice(0, randomPickCount!);
+      setRandomSnapshot(picked);
       return {
         words: picked,
         title: `${level.label} · 全年级随机抽 ${picked.length} 词`,
@@ -340,26 +348,33 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
     setError(null);
     try {
       if (isRandomMode) {
-        // 随机抽词：加载全年级 → 洗牌 → 截取 N
-        const allRefs: UnitRef[] = stage.groups.flatMap((g) =>
-          g.units.map((u) => ({ group: g.key, unit: u.unit })),
-        );
-        const allWords = await fetchUnitWords(level.base, allRefs);
-        const picked = shuffleWords(allWords).slice(0, randomPickCount!);
-        const title = `${level.label} · 全年级随机抽 ${picked.length} 词`;
+        // 随机抽词：优先复用预览阶段已生成的快照，确保预览和默写单词列表完全一致。
+        // 如果用户未点预览直接开始（快照为 null），则执行抽选并保存快照。
+        let finalPicked: WordItem[];
+        if (randomSnapshot) {
+          finalPicked = randomSnapshot;
+        } else {
+          const allRefs: UnitRef[] = stage.groups.flatMap((g) =>
+            g.units.map((u) => ({ group: g.key, unit: u.unit })),
+          );
+          const allWords = await fetchUnitWords(level.base, allRefs);
+          finalPicked = shuffleWords(allWords).slice(0, randomPickCount!);
+          setRandomSnapshot(finalPicked);
+        }
+        const title = `${level.label} · 全年级随机抽 ${finalPicked.length} 词`;
 
         if (effectiveChallenge) {
           // 随机抽词 + 闯关：把抽到的词均匀切成若干关
-          const levels = buildRandomLevels(picked);
+          const levels = buildRandomLevels(finalPicked);
           // 心数按抽取数量动态分段覆盖（不再一刀切 10 颗心）
-          const lives = livesForRandomChallenge(picked.length);
-          startQuiz(picked, title, 'challenge', levels, {
+          const lives = livesForRandomChallenge(finalPicked.length);
+          startQuiz(finalPicked, title, 'challenge', levels, {
             unitCount: levels.length,
             fullGrade: true,
             livesOverride: lives,
           });
         } else {
-          startQuiz(picked, title);
+          startQuiz(finalPicked, title);
         }
         return;
       }
@@ -524,6 +539,8 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
                       setRandomPickCount(null);
                       setRandomInput('');
                     }
+                    // 切换模式时清除快照，确保下次预览/开始重新抽选
+                    setRandomSnapshot(null);
                   }}
                 />
               </span>
@@ -543,6 +560,7 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
                       onClick={() => {
                         setRandomPickCount(n);
                         setRandomInput(String(n));
+                        setRandomSnapshot(null); // 修改抽选数量时清除快照
                       }}
                       className={cn(
                         'h-8 rounded-full border px-3 text-[13px] font-bold transition-all',
@@ -569,6 +587,7 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
                     if (!isNaN(v) && v > 0) {
                       setRandomPickCount(Math.min(v, totalGradeWords || v));
                     }
+                    setRandomSnapshot(null); // 修改抽选数量时清除快照
                   }}
                   className="h-8 w-20 rounded-full border-[1.5px] border-[#dce7f6] bg-white px-3 text-center text-[13px] font-bold text-primary outline-none transition-all focus:border-[#7a5af0]"
                   placeholder="自定义"
@@ -769,7 +788,11 @@ export function GradeUnitPanel({ level, onBack }: GradeUnitPanelProps) {
 
       <WordPreviewDialog
         open={previewOpen}
-        onOpenChange={setPreviewOpen}
+        onOpenChange={(open) => {
+          setPreviewOpen(open);
+          // 关闭预览弹窗时清除随机快照，下次预览/开始重新抽选
+          if (!open) setRandomSnapshot(null);
+        }}
         title={previewTitle}
         words={previewWords}
         shuffled={shuffle}
