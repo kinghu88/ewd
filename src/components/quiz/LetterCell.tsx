@@ -6,6 +6,8 @@ interface LetterCellProps {
   value: string;
   fixed: boolean;
   locked: boolean;
+  /** 跳过/超时后，这格字母是正确答案的醒目态 */
+  revealed?: boolean;
   registerRef: (index: number, el: HTMLInputElement | null) => void;
   /** 写入字母；传空串表示仅清空当前格 */
   onLetter: (index: number, letter: string) => void;
@@ -13,6 +15,8 @@ interface LetterCellProps {
   onErase: (index: number) => void;
   /** 方向键移动焦点 */
   onArrow: (index: number, dir: -1 | 1) => void;
+  /** 用户聚焦本格时向父级汇报（用于焦点持久化记录） */
+  onFocusCell?: (index: number) => void;
 }
 
 /**
@@ -24,10 +28,12 @@ export function LetterCell({
   value,
   fixed,
   locked,
+  revealed,
   registerRef,
   onLetter,
   onErase,
   onArrow,
+  onFocusCell,
 }: LetterCellProps) {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (locked) {
@@ -87,6 +93,7 @@ export function LetterCell({
         !fixed && !value && 'fl-cell-empty',
         value && 'is-filled',
         value && letterClass(value),
+        revealed && 'is-revealed',
       )}
     >
       <span className="fl-ln fl-ln-top" />
@@ -108,6 +115,7 @@ export function LetterCell({
           disabled={locked}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
+          onFocus={() => onFocusCell?.(index)}
           onCompositionEnd={handleCompositionEnd}
         />
       )}

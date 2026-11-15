@@ -38,20 +38,29 @@ interface ToneOptions {
 }
 
 function tone(ac: AudioContext, freq: number, opts: ToneOptions = {}): void {
-  const { at = 0, dur = 0.12, type = 'triangle', gain = 0.5 } = opts;
-  const t0 = ac.currentTime + at;
-  const osc = ac.createOscillator();
-  const g = ac.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, t0);
-  // 快速起音 + 指数衰减，避免爆音
-  g.gain.setValueAtTime(0.0001, t0);
-  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  osc.connect(g);
-  g.connect(master!);
-  osc.start(t0);
-  osc.stop(t0 + dur + 0.03);
+  const schedule = () => {
+    const { at = 0, dur = 0.12, type = 'triangle', gain = 0.5 } = opts;
+    const t0 = ac.currentTime + at;
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    // 快速起音 + 指数衰减，避免爆音
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g);
+    g.connect(master!);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.03);
+  };
+  // AudioContext 可能处于 suspended（自动播放策略 / 首次解锁未完成）；
+  // 先 resume 再调度，确保音频一定能播出来
+  if (ac.state === 'suspended') {
+    void ac.resume().then(schedule).catch(() => schedule());
+  } else {
+    schedule();
+  }
 }
 
 /** 音名 -> 频率（十二平均律，A4=440） */
@@ -174,8 +183,10 @@ export function playWrong(): void {
   stopVoices();
   const ac = ensureContext();
   if (!ac) return;
-  tone(ac, 220, { dur: 0.18, type: 'sawtooth', gain: 0.22 });
-  tone(ac, 155.56, { at: 0.13, dur: 0.26, type: 'sawtooth', gain: 0.22 });
+  // 两音下行 + 起始一个短促高频"叮"，增加辨识度
+  tone(ac, 880, { dur: 0.06, type: 'square', gain: 0.18 });
+  tone(ac, 220, { dur: 0.2, type: 'sawtooth', gain: 0.35 });
+  tone(ac, 155.56, { at: 0.14, dur: 0.3, type: 'sawtooth', gain: 0.35 });
 }
 
 /** 一血 */
@@ -246,35 +257,44 @@ export function playSniperShot(): void {
   unlock();
   const ac = ensureContext();
   if (!ac || !master) return;
-  const t0 = ac.currentTime;
 
-  // 高频爆裂：高通白噪声，80ms 内快速衰减
-  const src = ac.createBufferSource();
-  src.buffer = getNoise(ac);
-  const hp = ac.createBiquadFilter();
-  hp.type = 'highpass';
-  hp.frequency.value = 1000;
-  const g = ac.createGain();
-  g.gain.setValueAtTime(0.0001, t0);
-  g.gain.exponentialRampToValueAtTime(0.55, t0 + 0.005);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.1);
-  src.connect(hp);
-  hp.connect(g);
-  g.connect(master);
-  src.start(t0);
-  src.stop(t0 + 0.12);
+  const schedule = () => {
+    const t0 = ac.currentTime;
 
-  // 低频「砰」：110Hz 快速下坠到 38Hz，带长尾
-  const osc = ac.createOscillator();
-  const og = ac.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(110, t0);
-  osc.frequency.exponentialRampToValueAtTime(38, t0 + 0.42);
-  og.gain.setValueAtTime(0.0001, t0);
-  og.gain.exponentialRampToValueAtTime(0.5, t0 + 0.01);
-  og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
-  osc.connect(og);
-  og.connect(master);
-  osc.start(t0);
-  osc.stop(t0 + 0.55);
+    // 高频爆裂：高通白噪声，80ms 内快速衰减
+    const src = ac.createBufferSource();
+    src.buffer = getNoise(ac);
+    const hp = ac.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 1000;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.55, t0 + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.1);
+    src.connect(hp);
+    hp.connect(g);
+    g.connect(master!);
+    src.start(t0);
+    src.stop(t0 + 0.12);
+
+    // 低频「砰」：110Hz 快速下坠到 38Hz，带长尾
+    const osc = ac.createOscillator();
+    const og = ac.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(110, t0);
+    osc.frequency.exponentialRampToValueAtTime(38, t0 + 0.42);
+    og.gain.setValueAtTime(0.0001, t0);
+    og.gain.exponentialRampToValueAtTime(0.5, t0 + 0.01);
+    og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+    osc.connect(og);
+    og.connect(master!);
+    osc.start(t0);
+    osc.stop(t0 + 0.55);
+  };
+
+  if (ac.state === 'suspended') {
+    void ac.resume().then(schedule).catch(() => schedule());
+  } else {
+    schedule();
+  }
 }

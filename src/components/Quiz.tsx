@@ -60,9 +60,53 @@ export function Quiz() {
   const [peekingWord, setPeekingWord] = useState<string | null>(null);
   /** 使用道具的二次确认态（防止误点误花金币） */
   const [peekArmed, setPeekArmed] = useState(false);
+  /** 跳过 / 超时后把正确答案显式"亮"在四线格里的视觉态 */
+  const [revealed, setRevealed] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout>>();
   const announceTimer = useRef<ReturnType<typeof setTimeout>>();
   const announceKey = useRef(0);
+
+  // ===== 焦点持久化守护 =====
+  // 任何发生在四线格外部的点击（按钮、音效开关、错词本、播放读音等）都会延迟把焦点还给四线格，
+  // 使用户无需再手动点一下格子即可继续输入。弹层打开或确认锁定期间不抢焦；
+  // 但在这些状态解除后（例如关闭 Dialog）会补做一次 refocus。
+  useEffect(() => {
+    const insideGrid = (el: EventTarget | null): boolean => {
+      if (!(el instanceof Element)) return false;
+      return el.closest('.fl-grid-scroll') !== null;
+    };
+
+    const handler = (e: MouseEvent) => {
+      // 点击发生在四线格内部，无需处理
+      if (insideGrid(e.target)) return;
+
+      const scheduleRefocus = () => {
+        // 比 rAF 稍晚：让 click 冒泡、onClick、状态更新等都跑完
+        setTimeout(() => {
+          const s = useQuizStore.getState();
+          if (s.bookOpen || s.locked) return;
+          gridRef.current?.refocus();
+        }, 0);
+      };
+
+      const s = useQuizStore.getState();
+      if (s.bookOpen) {
+        // Dialog 打开中：点击内部按钮/遮罩/X 都可能关闭它；在关闭后的下一轮事件里补 refocus
+        scheduleRefocus();
+        return;
+      }
+      if (s.locked) {
+        // 确认后等待换词：advance 会解除锁定并由 FourLineGrid 内部的 wordName 变化重新聚焦第一格，
+        // 这里不需要额外 refocus
+        return;
+      }
+      scheduleRefocus();
+    };
+
+    // capture 阶段更早捕获，避免业务代码 stopPropagation 截断
+    document.addEventListener('click', handler, true);
+    return () => document.removeEventListener('click', handler, true);
+  }, []);
 
   /** 触发一次连击播报（每次都重启动画） */
   const fireAnnounce = useCallback((tier: ComboTier) => {
@@ -145,7 +189,7 @@ export function Quiz() {
     }, 900);
   }, [cells, fireAnnounce, judge, locked, peekingWord, advance, showToast]);
 
-  /** 限时模式超时：强制记为未答（错题），红闪后自动进入下一词 */
+  /** 限时模式超时：强制记为未答（错题），红闪 + 亮正确答案后自动进入下一词 */
   const handleTimeout = useCallback(() => {
     const s = useQuizStore.getState();
     if (s.locked) return;
@@ -153,15 +197,26 @@ export function Quiz() {
     if (s.settings.sound) playWrong();
     judgeTimeout();
     setFlash('bad');
+    // 把正确字母写进四线格，配合 revealed 样式醒目展示
+    if (current) {
+      let wi = 0;
+      const newCells = s.cells.map((cell) => {
+        if (cell.fixed || wi >= current.name.length) return cell;
+        const ch = current.name[wi++];
+        return { ...cell, letter: ch };
+      });
+      useQuizStore.setState({ cells: newCells });
+      setRevealed(true);
+    }
     showToast(`时间到！正确答案是「${current?.name ?? ''}」`);
     clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => {
       advance();
       setFlash(null);
-    }, 1300);
+    }, 1500);
   }, [judgeTimeout, advance, showToast]);
 
-  /** 用户主动跳过：记为错题，显示正确答案后进入下一词 */
+  /** 用户主动跳过：记为错题，红闪 + 亮正确答案后进入下一词 */
   const handleSkip = useCallback(() => {
     const s = useQuizStore.getState();
     if (s.locked || peekingWord) return;
@@ -169,12 +224,23 @@ export function Quiz() {
     if (s.settings.sound) playWrong();
     skip();
     setFlash('bad');
+    // 把正确字母写进四线格，配合 revealed 样式醒目展示
+    if (current) {
+      let wi = 0;
+      const newCells = s.cells.map((cell) => {
+        if (cell.fixed || wi >= current.name.length) return cell;
+        const ch = current.name[wi++];
+        return { ...cell, letter: ch };
+      });
+      useQuizStore.setState({ cells: newCells });
+      setRevealed(true);
+    }
     showToast(`跳过！正确答案是「${current?.name ?? ''}」`);
     clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => {
       advance();
       setFlash(null);
-    }, 1100);
+    }, 1500);
   }, [skip, advance, showToast, peekingWord]);
 
   // 全局键盘兜底：Enter 提交、Backspace 删除（最后一格失焦后依然有效）
@@ -213,17 +279,29 @@ export function Quiz() {
     void refreshShop();
   }, [refreshShop]);
 
-  // 换词：取消道具待确认态；异常换词（如限时超时打断特效）时收起特效层
+  // 换词：取消道具待确认态、reset revealed 高亮；异常换词（如限时超时打断特效）时收起特效层
   useEffect(() => {
     setPeekArmed(false);
     setPeekingWord(null);
+    setRevealed(false);
   }, [index]);
 
   // 特效播放状态同步到 store：限时模式倒计时在此期间冻结，卸载时确保复位
   useEffect(() => {
     setPeekActive(peekingWord !== null);
+    // 特效播放完（peekingWord 从单词变回 null）后自动 refocus，让用户继续输入
+    if (peekingWord === null && prevPeek.current !== null) {
+      // 等一个微任务让 state 稳定后再 refocus
+      setTimeout(() => {
+        const s = useQuizStore.getState();
+        if (!s.bookOpen && !s.locked) gridRef.current?.refocus();
+      }, 0);
+    }
+    prevPeek.current = peekingWord;
     return () => setPeekActive(false);
   }, [peekingWord, setPeekActive]);
+
+  const prevPeek = useRef<string | null>(null);
 
   // 离开答题页/换词时停止朗读；卸载时清理跳转 / 播报定时器
   useEffect(() => {
@@ -362,6 +440,7 @@ export function Quiz() {
             cells={cells}
             locked={locked}
             flash={flash}
+            revealed={revealed}
           />
           {peekingWord === word.name && (
             <PeekGunEffect
