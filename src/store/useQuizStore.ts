@@ -79,8 +79,6 @@ interface QuizState {
 
   toast: string | null;
   bookOpen: boolean;
-  /** 「查看单词」冲锋枪特效播放中（限时模式倒计时在此期间暂停） */
-  peekActive: boolean;
   /** 错词本变更版本号，驱动各处角标/列表刷新 */
   bookVersion: number;
 
@@ -101,8 +99,6 @@ interface QuizState {
   bumpRewards: () => void;
   showToast: (message: string) => void;
   setBookOpen: (open: boolean) => void;
-  /** 标记「查看单词」特效播放状态（联动限时倒计时暂停） */
-  setPeekActive: (active: boolean) => void;
   refreshBook: () => void;
 
   /**
@@ -225,7 +221,6 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       view: 'home',
       gate: null,
       bookOpen: false,
-      peekActive: false,
     });
   },
 
@@ -252,7 +247,6 @@ export const useQuizStore = create<QuizState>((set, get) => ({
 
   toast: null,
   bookOpen: false,
-  peekActive: false,
   bookVersion: 0,
 
   setSetting: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
@@ -264,7 +258,6 @@ export const useQuizStore = create<QuizState>((set, get) => ({
   },
 
   setBookOpen: (open) => set({ bookOpen: open }),
-  setPeekActive: (active) => set({ peekActive: active }),
   refreshBook: () => set((s) => ({ bookVersion: s.bookVersion + 1 })),
 
   startQuiz: (words, sourceLabel, mode, levelsArg, rewardArg) => {

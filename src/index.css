@@ -212,6 +212,41 @@ body {
 .fl-grid.locked .fl-cell:focus-within::after {
   display: none;
 }
+
+/* ===== 「查看单词」打字机逐字揭示 ===== */
+/* 打字机期间禁用输入交互 */
+.fl-grid.peeking .fl-input {
+  pointer-events: none;
+}
+/* 每个字母被填入时弹入：缩放 + 淡入 + 轻微高亮色，像打字机敲字 */
+.fl-grid.peeking .fl-cell.is-filled .fl-letter {
+  animation: fl-typewriter-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  color: #3b6fe0;
+}
+/* 被揭示的格子短暂高亮底色，强化"敲字落格"感 */
+.fl-grid.peeking .fl-cell.is-filled {
+  background: rgba(90, 140, 255, 0.1);
+  border-radius: 6px;
+  transition: background 0.3s ease;
+}
+@keyframes fl-typewriter-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.6);
+    filter: blur(2px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.08);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
 .fl-grid.flash-ok {
   animation: fl-ok-flash 0.85s;
 }
@@ -797,284 +832,3 @@ body {
   transform: translateX(-1px);
 }
 
-/* ============================================================
-   「查看单词」狙击镜特效（AI 视频 + 开火瞬间逐字母弹出）
-   ============================================================ */
-
-.peek-stage {
-  position: relative;
-}
-
-/* 特效层：以四线格为中心向上下扩展，形成狙击时刻接管区，
-   保证圆形镜筒与冲击波完整入镜（克隆格仍与真实格子对齐，见下方偏移） */
-.peek-overlay {
-  --peek-up: 122px;
-  --peek-down: 122px;
-  position: absolute;
-  top: calc(-1 * var(--peek-up));
-  right: 0;
-  left: 0;
-  z-index: 6;
-  height: calc(100% + var(--peek-up) + var(--peek-down));
-  overflow: hidden;
-  border-radius: 14px;
-  background: transparent;
-  animation: peek-fade-in 0.2s ease both;
-  transition: opacity 0.3s ease;
-}
-.peek-overlay.is-leaving {
-  opacity: 0;
-}
-@keyframes peek-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* AI 生成视频：第一人称狙击镜铺满格子区 */
-.peek-scope-video {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-}
-/* 克隆四线格：绝对定位回到真实格子的位置（overlay 上移了 --peek-up） */
-.peek-grid-scroll {
-  position: absolute;
-  top: calc(var(--peek-up) + 8px);
-  right: 4px;
-  left: 4px;
-  z-index: 2;
-  overflow: hidden;
-}
-.peek-grid {
-  display: flex;
-  gap: 6px;
-  align-items: flex-start;
-  justify-content: center;
-  width: max-content;
-  min-width: min-content;
-  margin: 0 auto;
-}
-.peek-cell {
-  position: relative;
-  flex: none;
-  width: var(--fl-cell);
-  height: calc(var(--fl-cell) * 3);
-}
-.peek-cell .fl-letter.peek-letter {
-  color: #232c3f;
-  text-shadow: 0 2px 12px rgba(255, 255, 255, 0.75);
-  animation: peek-letter-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
-}
-/* 克隆层字母纵向占位（.lt-* 在真格里是祖先选择器，这里直接落在字母上） */
-.peek-cell .fl-letter.lt-asc,
-.peek-cell .fl-letter.lt-desc {
-  height: calc(var(--fl-cell) * 2);
-}
-.peek-cell .fl-letter.lt-full {
-  height: calc(var(--fl-cell) * 3);
-}
-@keyframes peek-letter-in {
-  0% {
-    opacity: 0;
-    transform: scale(1.7);
-    filter: blur(2px);
-  }
-  55% {
-    opacity: 1;
-    transform: scale(0.9);
-    filter: blur(0);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* 命中火花：四向橙色射线 + 白色中心光点（与视频冲击波同扁平语言） */
-.peek-spark {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-  animation: peek-spark 0.42s ease-out forwards;
-}
-.peek-spark i {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 2.5px;
-  height: 14px;
-  margin-left: -1.25px;
-  margin-top: -14px;
-  border-radius: 2px;
-  background: linear-gradient(180deg, #ffffff, #ffb02e);
-  transform-origin: 50% 100%;
-}
-.peek-spark i:nth-child(1) {
-  transform: rotate(0deg);
-}
-.peek-spark i:nth-child(2) {
-  transform: rotate(45deg);
-}
-.peek-spark i:nth-child(3) {
-  transform: rotate(90deg);
-}
-.peek-spark i:nth-child(4) {
-  transform: rotate(135deg);
-}
-.peek-spark b {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 7px;
-  height: 7px;
-  margin-left: -3.5px;
-  margin-top: -3.5px;
-  border-radius: 999px;
-  background: radial-gradient(circle, #ffffff 0%, #ffc24d 75%);
-}
-@keyframes peek-spark {
-  0% {
-    opacity: 1;
-    transform: scale(0.3) rotate(0deg);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.4) rotate(24deg);
-  }
-}
-
-/* ============================================================
-   CSS-only 狙击镜兜底特效（视频文件缺失 / 浏览器解码失败时启用）
-   ============================================================ */
-
-.peek-fallback {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-  background: transparent;
-}
-
-/* 镜筒整体：由 JS Web Animations API 动态生成随机搜索轨迹并驱动 */
-.peek-scope-body {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 280px;
-  height: 280px;
-  margin: -140px 0 0 -140px;
-  /* 初始态与 JS 动画第一帧对齐，防闪现 */
-  opacity: 0;
-  transform: translate(0, 0) scale(0.92);
-}
-
-/* 外圈光环：黑色带微透（微抖动由 JS 驱动） */
-.peek-scope-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 4px solid rgba(35, 44, 63, 0.82);
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.9) inset,
-    0 0 0 4px rgba(35, 44, 63, 0.35),
-    0 0 36px rgba(0, 0, 0, 0.15);
-}
-
-/* 内圈瞄准细环 */
-.peek-scope-inner {
-  position: absolute;
-  inset: 32px;
-  border-radius: 50%;
-  border: 1.5px dashed rgba(35, 44, 63, 0.5);
-}
-
-/* 十字准星：水平线（展开由 JS 驱动） */
-.peek-crosshair-x {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1.5px;
-  background: rgba(35, 44, 63, 0.9);
-  /* 初始隐藏，JS 动画接手防闪现 */
-  transform: scaleX(0);
-  transform-origin: center;
-  opacity: 0;
-}
-
-/* 十字准星：垂直线 */
-.peek-crosshair-y {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 1.5px;
-  background: rgba(35, 44, 63, 0.9);
-  transform: scaleY(0);
-  transform-origin: center;
-  opacity: 0;
-}
-
-/* 中央遮光片（开火闪光由 JS 驱动） */
-.peek-scope-iris {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  margin: -4px 0 0 -4px;
-  border-radius: 50%;
-  background: #232c3f;
-}
-
-/* 开火冲击波（扩散由 JS 驱动） */
-.peek-blast-wave {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 40px;
-  height: 40px;
-  margin: -20px 0 0 -20px;
-  border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.95);
-  box-shadow:
-    0 0 12px rgba(255, 255, 255, 0.9),
-    0 0 24px rgba(255, 220, 120, 0.6);
-  opacity: 0;
-}
-
-/* 飞散粒子（飞散由 JS 驱动） */
-.peek-blast-particle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  margin: -2.5px 0 0 -2.5px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ffffff 0%, #ffb02e 100%);
-  opacity: 0;
-}
-.peek-blast-particle--2 {}
-.peek-blast-particle--3 {}
-.peek-blast-particle--4 {}
-
-@media (prefers-reduced-motion: reduce) {
-  .peek-overlay,
-  .peek-cell .fl-letter.peek-letter,
-  .peek-spark {
-    animation: none;
-  }
-}

@@ -373,7 +373,7 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
               {tab === 'props' && (
                 <>
                   <p className="mb-3 text-[12.5px] leading-5 text-muted-foreground">
-                    道具在默写练习中使用：遇到不会的单词消耗「查看单词」，冲锋枪会把字母逐个打在四线格上，看完凭记忆写出来。
+                    道具在默写练习中使用：遇到不会的单词消耗「查看单词」，直接把正确字母写入四线格，帮你渡过难关。
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {props.map((item) => (

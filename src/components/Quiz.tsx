@@ -12,7 +12,6 @@ import { PEEK_SKU } from '@/lib/shop';
 import { FourLineGrid, type GridHandle } from './quiz/FourLineGrid';
 import { TimerChip } from './quiz/TimerChip';
 import { ComboBanner, type ComboAnnounce } from './quiz/ComboBanner';
-import { PeekGunEffect } from './quiz/PeekGunEffect';
 import { LevelGateDialog } from './challenge/LevelGateDialog';
 import { cn } from '@/lib/utils';
 import type { FlashKind } from '@/lib/types';
@@ -50,21 +49,22 @@ export function Quiz() {
   const setCoins = useQuizStore((s) => s.setCoins);
   const setInventory = useQuizStore((s) => s.setInventory);
   const refreshShop = useQuizStore((s) => s.refreshShop);
-  const setPeekActive = useQuizStore((s) => s.setPeekActive);
 
   const gridRef = useRef<GridHandle>(null);
   const [flash, setFlash] = useState<FlashKind | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const [announce, setAnnounce] = useState<ComboAnnounce | null>(null);
-  /** 「查看单词」冲锋枪特效正在播放的单词；null=未使用 */
-  const [peekingWord, setPeekingWord] = useState<string | null>(null);
   /** 使用道具的二次确认态（防止误点误花金币） */
   const [peekArmed, setPeekArmed] = useState(false);
+  /** 「查看单词」打字机揭示动画进行中 */
+  const [peeking, setPeeking] = useState(false);
   /** 跳过 / 超时后把正确答案显式"亮"在四线格里的视觉态 */
   const [revealed, setRevealed] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout>>();
   const announceTimer = useRef<ReturnType<typeof setTimeout>>();
   const announceKey = useRef(0);
+  /** 打字机逐字揭示的定时器队列，换词/卸载时统一清理 */
+  const peekTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // ===== 焦点持久化守护 =====
   // 任何发生在四线格外部的点击（按钮、音效开关、错词本、播放读音等）都会延迟把焦点还给四线格，
@@ -134,11 +134,10 @@ export function Quiz() {
   const peekCount = inventory[PEEK_SKU] ?? 0;
 
   /**
-   * 消耗「查看单词」道具：服务端原子扣减并记使用次数成功后才播放冲锋枪特效。
-   * 特效只做视觉揭示，不写入格子，淡出后由用户凭记忆书写。
+   * 消耗「查看单词」道具：服务端原子扣减成功后，用打字机效果把正确字母逐个写入四线格。
    */
   const usePeekItem = useCallback(async () => {
-    if (locked || peekingWord) return;
+    if (locked || peeking) return;
     try {
       const res = await shopApi.consumeItem(PEEK_SKU, `${useQuizStore.getState().sourceLabel}｜${word.name}`);
       const current = useQuizStore.getState().inventory;
@@ -150,12 +149,42 @@ export function Quiz() {
       return;
     }
     setPeekArmed(false);
-    setPeekingWord(word.name);
-  }, [locked, peekingWord, word, setCoins, setInventory, refreshShop, showToast]);
+
+    // 先清空用户已填的字母，让打字机从空白格开始逐字敲入
+    const state = useQuizStore.getState();
+    const targets: number[] = [];
+    state.cells.forEach((cell, i) => {
+      if (!cell.fixed) targets.push(i);
+    });
+    const cleared = state.cells.map((cell) =>
+      cell.fixed ? cell : { ...cell, letter: '' },
+    );
+    useQuizStore.setState({ cells: cleared });
+
+    setPeeking(true);
+    // 清掉上一次可能残留的定时器
+    peekTimers.current.forEach(clearTimeout);
+    peekTimers.current = [];
+
+    const STAGGER_MS = 90;
+    targets.forEach((cellIdx, k) => {
+      const ch = word.name[k] ?? '';
+      const t = setTimeout(() => {
+        setLetter(cellIdx, ch);
+      }, k * STAGGER_MS);
+      peekTimers.current.push(t);
+    });
+
+    // 全部填完后退出打字机态
+    const done = setTimeout(() => {
+      setPeeking(false);
+    }, targets.length * STAGGER_MS + 120);
+    peekTimers.current.push(done);
+  }, [locked, peeking, word, setCoins, setInventory, refreshShop, showToast, setLetter]);
 
   /** 整词确认：未填完提示并定位；一词一确认，确认后锁定并自动下一词 */
   const confirmWord = useCallback(() => {
-    if (locked || peekingWord) return;
+    if (locked) return;
     const missing = cells.findIndex((c) => !c.fixed && !c.letter);
     if (missing !== -1) {
       showToast('还有字母未填写，补全后再确认');
@@ -187,7 +216,7 @@ export function Quiz() {
       advance();
       setFlash(null);
     }, 900);
-  }, [cells, fireAnnounce, judge, locked, peekingWord, advance, showToast]);
+  }, [cells, fireAnnounce, judge, locked, advance, showToast]);
 
   /** 限时模式超时：强制记为未答（错题），红闪 + 亮正确答案后自动进入下一词 */
   const handleTimeout = useCallback(() => {
@@ -219,7 +248,7 @@ export function Quiz() {
   /** 用户主动跳过：记为错题，红闪 + 亮正确答案后进入下一词 */
   const handleSkip = useCallback(() => {
     const s = useQuizStore.getState();
-    if (s.locked || peekingWord) return;
+    if (s.locked) return;
     const current = s.words[s.index];
     if (s.settings.sound) playWrong();
     skip();
@@ -241,7 +270,7 @@ export function Quiz() {
       advance();
       setFlash(null);
     }, 1500);
-  }, [skip, advance, showToast, peekingWord]);
+  }, [skip, advance, showToast]);
 
   // 全局键盘兜底：Enter 提交、Backspace 删除（最后一格失焦后依然有效）
   useEffect(() => {
@@ -279,36 +308,24 @@ export function Quiz() {
     void refreshShop();
   }, [refreshShop]);
 
-  // 换词：取消道具待确认态、reset revealed 高亮；异常换词（如限时超时打断特效）时收起特效层
+  // 换词：取消道具待确认态、reset revealed 高亮、中止打字机动画
   useEffect(() => {
     setPeekArmed(false);
-    setPeekingWord(null);
     setRevealed(false);
+    peekTimers.current.forEach(clearTimeout);
+    peekTimers.current = [];
+    setPeeking(false);
   }, [index]);
 
-  // 特效播放状态同步到 store：限时模式倒计时在此期间冻结，卸载时确保复位
-  useEffect(() => {
-    setPeekActive(peekingWord !== null);
-    // 特效播放完（peekingWord 从单词变回 null）后自动 refocus，让用户继续输入
-    if (peekingWord === null && prevPeek.current !== null) {
-      // 等一个微任务让 state 稳定后再 refocus
-      setTimeout(() => {
-        const s = useQuizStore.getState();
-        if (!s.bookOpen && !s.locked) gridRef.current?.refocus();
-      }, 0);
-    }
-    prevPeek.current = peekingWord;
-    return () => setPeekActive(false);
-  }, [peekingWord, setPeekActive]);
 
-  const prevPeek = useRef<string | null>(null);
-
-  // 离开答题页/换词时停止朗读；卸载时清理跳转 / 播报定时器
+  // 离开答题页/换词时停止朗读；卸载时清理跳转 / 播报 / 打字机定时器
   useEffect(() => {
     return () => {
       stopSpeaking();
       clearTimeout(advanceTimer.current);
       clearTimeout(announceTimer.current);
+      peekTimers.current.forEach(clearTimeout);
+      peekTimers.current = [];
     };
   }, []);
 
@@ -433,37 +450,17 @@ export function Quiz() {
           </span>
         </div>
 
-        <div className="peek-stage">
-          <FourLineGrid
-            ref={gridRef}
-            wordName={word.name}
-            cells={cells}
-            locked={locked}
-            flash={flash}
-            revealed={revealed}
-          />
-          {peekingWord === word.name && (
-            <PeekGunEffect
-              key={word.name}
-              word={word.name}
-              soundOn={soundOn}
-              onReveal={(revealedWord) => {
-                // 特效弹完所有字母后，把答案真写进格子
-                const state = useQuizStore.getState();
-                let wi = 0;
-                const newCells = state.cells.map((cell) => {
-                  if (cell.fixed || wi >= revealedWord.length) return cell;
-                  const ch = revealedWord[wi++];
-                  return { ...cell, letter: ch };
-                });
-                useQuizStore.setState({ cells: newCells });
-              }}
-              onDone={() => setPeekingWord(null)}
-            />
-          )}
-        </div>
+        <FourLineGrid
+          ref={gridRef}
+          wordName={word.name}
+          cells={cells}
+          locked={locked}
+          flash={flash}
+          revealed={revealed}
+          peeking={peeking}
+        />
 
-        {/* 「查看单词」道具：二次确认后消耗，冲锋枪把字母打在四线格上 */}
+        {/* 「查看单词」道具：二次确认后消耗，打字机逐字揭示答案 */}
         <div className="mt-4 flex min-h-[34px] items-center justify-center">
           {peekArmed ? (
             <span className="inline-flex items-center gap-2 rounded-full border-[1.5px] border-[#f0c98a] bg-[#fff6e6] px-3 py-1.5 text-[13px] font-bold text-[#d97706]">
@@ -488,7 +485,7 @@ export function Quiz() {
               variant="outline"
               size="sm"
               className="rounded-full border-[#c7d6ee] text-[13px] font-bold text-[#4a6488]"
-              disabled={locked || peekingWord !== null || peekCount <= 0}
+              disabled={locked || peeking || peekCount <= 0}
               title={peekCount <= 0 ? '没有道具了，回首页金币商店兑换' : '不会写？消耗一个查看单词'}
               onClick={() => setPeekArmed(true)}
             >
@@ -505,7 +502,7 @@ export function Quiz() {
           <Button
             variant="outline"
             className="min-w-[110px] flex-1 border-[#f0c98a] bg-[#fff6e6] text-[#a86a1e] hover:border-[#e08a1e] hover:bg-[#fff3da] hover:text-[#a86a1e] sm:flex-none"
-            disabled={locked || peekingWord !== null}
+            disabled={locked || peeking}
             onClick={handleSkip}
           >
             <ArrowRight className="h-[16px] w-[16px]" />
@@ -514,7 +511,7 @@ export function Quiz() {
           <Button
             variant="outline"
             className="min-w-[110px] flex-1 sm:flex-none"
-            disabled={locked || peekingWord !== null}
+            disabled={locked || peeking}
             onClick={() => {
               clearLetters();
               gridRef.current?.focusFirst();
@@ -524,7 +521,7 @@ export function Quiz() {
           </Button>
           <Button
             className="min-w-[110px] flex-1 sm:flex-none"
-            disabled={locked || peekingWord !== null}
+            disabled={locked || peeking}
             onClick={confirmWord}
           >
             确认 (Enter)

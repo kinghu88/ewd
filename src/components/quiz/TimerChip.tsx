@@ -56,9 +56,8 @@ export function TimerChip({ onExpire }: TimerChipProps) {
   const timed = useQuizStore((s) => s.settings.timed);
   const locked = useQuizStore((s) => s.locked);
   const bookOpen = useQuizStore((s) => s.bookOpen);
-  const peekActive = useQuizStore((s) => s.peekActive);
-  // 错词本打开 / 「查看单词」特效期间暂停；确认锁定后停止（归零瞬间由 onExpire 锁定）
-  const { left, ratio } = useCountdown(SECONDS_PER_WORD, timed && !locked && !bookOpen && !peekActive, onExpire);
+  // 错词本打开期间暂停；确认锁定后停止（归零瞬间由 onExpire 锁定）
+  const { left, ratio } = useCountdown(SECONDS_PER_WORD, timed && !locked && !bookOpen, onExpire);
 
   if (!timed) return null;
 

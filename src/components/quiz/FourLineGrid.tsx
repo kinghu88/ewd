@@ -35,6 +35,8 @@ interface FourLineGridProps {
   flash: FlashKind | null;
   /** 跳过/超时后，正确答案已写入 cells，需要醒目高亮展示 */
   revealed?: boolean;
+  /** 「查看单词」打字机揭示中：禁用输入并播放逐字弹入动画 */
+  peeking?: boolean;
 }
 
 /**
@@ -42,7 +44,7 @@ interface FourLineGridProps {
  * 焦点管理通过命令式 handle 暴露给父组件（确认前定位空格、失焦兜底删除等）。
  */
 export const FourLineGrid = forwardRef<GridHandle, FourLineGridProps>(
-  function FourLineGrid({ wordName, cells, locked, flash, revealed }, ref) {
+  function FourLineGrid({ wordName, cells, locked, flash, revealed, peeking }, ref) {
     const setLetter = useQuizStore((s) => s.setLetter);
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     const [shaking, setShaking] = useState(false);
@@ -158,6 +160,7 @@ export const FourLineGrid = forwardRef<GridHandle, FourLineGridProps>(
           className={cn(
             'fl-grid',
             locked && 'locked',
+            peeking && 'peeking',
             shaking && 'shake',
             flash === 'ok' && 'flash-ok',
             flash === 'bad' && 'flash-bad',
@@ -171,6 +174,7 @@ export const FourLineGrid = forwardRef<GridHandle, FourLineGridProps>(
               value={cell.letter}
               fixed={cell.fixed}
               locked={locked}
+              peeking={peeking}
               revealed={revealed && !cell.fixed && !!cell.letter}
               registerRef={registerRef}
               onLetter={handleLetter}

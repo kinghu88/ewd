@@ -8,6 +8,8 @@ interface LetterCellProps {
   locked: boolean;
   /** 跳过/超时后，这格字母是正确答案的醒目态 */
   revealed?: boolean;
+  /** 「查看单词」打字机揭示中：禁用输入 */
+  peeking?: boolean;
   registerRef: (index: number, el: HTMLInputElement | null) => void;
   /** 写入字母；传空串表示仅清空当前格 */
   onLetter: (index: number, letter: string) => void;
@@ -29,6 +31,7 @@ export function LetterCell({
   fixed,
   locked,
   revealed,
+  peeking,
   registerRef,
   onLetter,
   onErase,
@@ -112,7 +115,7 @@ export function LetterCell({
           autoCapitalize="none"
           spellCheck={false}
           aria-label={`第${index + 1}个字母`}
-          disabled={locked}
+          disabled={locked || peeking}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           onFocus={() => onFocusCell?.(index)}
