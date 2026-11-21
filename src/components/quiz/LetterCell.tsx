@@ -88,14 +88,17 @@ export function LetterCell({
     e.currentTarget.value = '';
   };
 
+  // 词间空格：渲染成窄间隙，不画四线、不占位字母，避免看起来"多出一个空格格"
+  const isSpace = fixed && value === ' ';
+
   return (
     <div
       className={cn(
         'fl-cell',
-        fixed && 'fl-cell-fixed lt-mid',
+        isSpace ? 'fl-cell-space' : fixed && 'fl-cell-fixed lt-mid',
         !fixed && !value && 'fl-cell-empty',
-        value && 'is-filled',
-        value && letterClass(value),
+        !isSpace && value && 'is-filled',
+        !isSpace && value && letterClass(value),
         revealed && 'is-revealed',
       )}
     >

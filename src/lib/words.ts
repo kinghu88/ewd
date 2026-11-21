@@ -72,8 +72,10 @@ export function letterClass(ch: string): LetterPlacement {
 export interface GridCell {
   /** 格内当前内容（非字母格为预填字符） */
   letter: string;
-  /** 非字母格（连字符等），预填且不可编辑 */
+  /** 非字母格（连字符、空格等），预填且不可编辑 */
   fixed: boolean;
+  /** 该格在原单词中对应的字符：揭示答案时直接取用，避免可编辑格与原串下标错位 */
+  source: string;
 }
 
 /** 按单词构建格子模型：非字母字符作为预填固定格 */
@@ -81,7 +83,13 @@ export function buildGrid(wordName: string): GridCell[] {
   return Array.from(wordName).map((ch) => ({
     letter: isEnglishLetter(ch) ? '' : ch,
     fixed: !isEnglishLetter(ch),
+    source: ch,
   }));
+}
+
+/** 判断是否为词间空格格（不可见但需在视觉上留出词间距） */
+export function isSpaceCell(cell: GridCell): boolean {
+  return cell.fixed && cell.source === ' ';
 }
 
 export function findNextEditable(cells: GridCell[], i: number): number {

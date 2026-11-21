@@ -168,7 +168,8 @@ export function Quiz() {
 
     const STAGGER_MS = 90;
     targets.forEach((cellIdx, k) => {
-      const ch = word.name[k] ?? '';
+      // 直接取该格对应的原字符：词中含空格/连字符时，可编辑格下标与原串下标不再一致
+      const ch = state.cells[cellIdx]?.source ?? '';
       const t = setTimeout(() => {
         setLetter(cellIdx, ch);
       }, k * STAGGER_MS);
@@ -228,12 +229,9 @@ export function Quiz() {
     setFlash('bad');
     // 把正确字母写进四线格，配合 revealed 样式醒目展示
     if (current) {
-      let wi = 0;
-      const newCells = s.cells.map((cell) => {
-        if (cell.fixed || wi >= current.name.length) return cell;
-        const ch = current.name[wi++];
-        return { ...cell, letter: ch };
-      });
+      const newCells = s.cells.map((cell) =>
+        cell.fixed ? cell : { ...cell, letter: cell.source },
+      );
       useQuizStore.setState({ cells: newCells });
       setRevealed(true);
     }
@@ -255,12 +253,9 @@ export function Quiz() {
     setFlash('bad');
     // 把正确字母写进四线格，配合 revealed 样式醒目展示
     if (current) {
-      let wi = 0;
-      const newCells = s.cells.map((cell) => {
-        if (cell.fixed || wi >= current.name.length) return cell;
-        const ch = current.name[wi++];
-        return { ...cell, letter: ch };
-      });
+      const newCells = s.cells.map((cell) =>
+        cell.fixed ? cell : { ...cell, letter: cell.source },
+      );
       useQuizStore.setState({ cells: newCells });
       setRevealed(true);
     }

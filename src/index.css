@@ -199,6 +199,20 @@ body {
   );
 }
 
+/* 词间空格格：窄间隙，不绘制四线与字母，视觉上自然分隔两个单词，不再像"多出一格" */
+.fl-cell.fl-cell-space {
+  width: calc(var(--fl-cell) * 0.42);
+  background: transparent;
+}
+.fl-cell.fl-cell-space .fl-ln,
+.fl-cell.fl-cell-space .fl-letter {
+  display: none;
+}
+/* 锁定态下保持透明，不随整片字母格一起变灰 */
+.fl-grid.locked .fl-cell.fl-cell-space {
+  background: transparent;
+}
+
 /* 确认锁定态与对错闪烁 */
 .fl-grid.locked .fl-cell {
   background: #eef2f7;
